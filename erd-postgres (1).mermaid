@@ -1,0 +1,666 @@
+erDiagram
+    %% ═══════════════════════════════════════════
+    %% QUANTUMBILL — PostgreSQL ERD (OLTP)
+    %% ═══════════════════════════════════════════
+
+    %% ── CORE / IDENTITY ──────────────────────
+    organizations {
+        uuid id PK
+        varchar name
+        varchar slug UK
+        varchar billing_email
+        varchar status "active | suspended | cancelled"
+        jsonb settings
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    users {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar email UK
+        uuid role_id FK
+        varchar status "active | invited | deactivated"
+        varchar avatar_initials
+        timestamp last_active_at
+        timestamp created_at
+    }
+
+    roles {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        text description
+        timestamp created_at
+    }
+
+    role_permissions {
+        uuid id PK
+        uuid role_id FK
+        varchar permission "e.g. billing.read"
+    }
+
+    %% ── PRODUCT CATALOG ──────────────────────
+    meters {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar event_type "e.g. llm.inference"
+        varchar aggregation "SUM | COUNT | MAX | AVG"
+        varchar field "e.g. input_tokens"
+        varchar status "active | draft | archived"
+        timestamp created_at
+    }
+
+    products {
+        uuid id PK
+        uuid org_id FK
+        varchar name "Starter | Pro | Enterprise"
+        text description
+        decimal base_price
+        jsonb included_units "key-value of meter-to-included-qty"
+        varchar status "active | draft | archived"
+        timestamp created_at
+    }
+
+    features {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        text description
+        varchar category "core | security | ai | integration | support"
+        varchar status "active | deprecated"
+        timestamp created_at
+    }
+
+    product_features {
+        uuid id PK
+        uuid product_id FK
+        uuid feature_id FK
+    }
+
+    pricing_models {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar pricing_type "per_unit | tiered | volume | package"
+        uuid meter_id FK
+        decimal unit_price "nullable for tiered"
+        varchar unit_label "per token | per call"
+        varchar status "active | draft | archived"
+        timestamp created_at
+    }
+
+    pricing_tiers {
+        uuid id PK
+        uuid pricing_model_id FK
+        bigint from_qty
+        bigint to_qty "null = unlimited"
+        decimal price_per_unit
+        int sort_order
+    }
+
+    rate_cards {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        int version
+        varchar status "active | deprecated | draft"
+        date effective_date
+        timestamp created_at
+    }
+
+    rate_card_rates {
+        uuid id PK
+        uuid rate_card_id FK
+        uuid meter_id FK
+        varchar model_name "GPT-4 | Claude 3 | All"
+        decimal rate
+        varchar unit_label
+    }
+
+    %% ── CUSTOMERS ────────────────────────────
+    customers {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar email
+        uuid product_id FK "current plan"
+        varchar status "active | trial | churned | suspended"
+        decimal mrr
+        decimal credit_balance
+        int health_score
+        varchar logo_initials
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    contracts {
+        uuid id PK
+        uuid customer_id FK
+        varchar name
+        varchar status "active | expired | terminated"
+        varchar contract_type "prepaid | postpaid"
+        date start_date
+        date end_date
+        decimal total_value
+        decimal commit_amount
+        decimal used_amount
+        decimal remaining_amount
+        uuid rate_card_id FK
+        boolean auto_renew
+        varchar payment_terms "Net 30 | Net 45 | Due on Receipt"
+        int amendment_count
+        timestamp created_at
+    }
+
+    entitlement_grants {
+        uuid id PK
+        uuid customer_id FK
+        uuid feature_id FK
+        text reason
+        timestamp expires_at
+        timestamp granted_at
+        varchar granted_by
+    }
+
+    usage_limits {
+        uuid id PK
+        uuid product_id FK
+        uuid meter_id FK
+        varchar limit_type "hard | soft | none"
+        bigint limit_value
+        varchar period "monthly | daily"
+        int warning_threshold_pct
+        varchar status
+    }
+
+    limit_overrides {
+        uuid id PK
+        uuid customer_id FK
+        uuid meter_id FK
+        bigint original_limit
+        bigint new_limit
+        text reason
+        timestamp expires_at
+        varchar created_by
+        timestamp created_at
+    }
+
+    %% ── CREDITS ──────────────────────────────
+    credits {
+        uuid id PK
+        uuid customer_id FK
+        varchar credit_type "prepaid | promotional | commit | compensation"
+        decimal original_amount
+        decimal remaining_amount
+        decimal used_amount
+        timestamp expires_at
+        int priority
+        varchar applicable_to "all | specific meter/model"
+        varchar status "active | exhausted | expired"
+        text reason
+        timestamp created_at
+    }
+
+    credit_ledger {
+        uuid id PK
+        uuid customer_id FK
+        uuid credit_id FK
+        date entry_date
+        varchar txn_type "usage | grant | adjustment | expiry"
+        decimal amount "negative for usage"
+        decimal running_balance
+        text description
+        timestamp created_at
+    }
+
+    %% ── BILLING / INVOICING ──────────────────
+    invoices {
+        uuid id PK
+        varchar invoice_number UK
+        uuid customer_id FK
+        varchar status "draft | pending | paid | overdue | void"
+        date issue_date
+        date due_date
+        date paid_date
+        decimal subtotal
+        decimal credits_applied
+        decimal tax_amount
+        decimal tax_rate
+        decimal total
+        varchar currency
+        uuid payment_method_id FK
+        text notes
+        int dunning_step
+        timestamp created_at
+    }
+
+    invoice_line_items {
+        uuid id PK
+        uuid invoice_id FK
+        text description
+        uuid meter_id FK "nullable for base fees"
+        bigint quantity
+        decimal unit_price
+        decimal amount
+        varchar model_name
+        int sort_order
+    }
+
+    payment_methods {
+        uuid id PK
+        uuid customer_id FK
+        varchar method_type "card | bank_account"
+        varchar brand "visa | mastercard | ach"
+        varchar last4
+        int exp_month
+        int exp_year
+        varchar bank_name
+        varchar account_type
+        boolean is_default
+        varchar status "active | expiring | expired"
+        varchar billing_name
+        jsonb billing_address
+        timestamp created_at
+    }
+
+    payments {
+        uuid id PK
+        uuid invoice_id FK
+        uuid customer_id FK
+        decimal amount
+        varchar currency
+        varchar status "succeeded | failed | pending | refunded"
+        uuid payment_method_id FK
+        timestamp payment_date
+        text description
+        text failure_reason
+        timestamp created_at
+    }
+
+    credit_notes {
+        uuid id PK
+        varchar credit_note_number UK
+        uuid invoice_id FK
+        uuid customer_id FK
+        decimal amount
+        text reason
+        varchar status "pending | applied | voided"
+        date issue_date
+        date applied_date
+    }
+
+    %% ── TAX ──────────────────────────────────
+    tax_regions {
+        uuid id PK
+        uuid org_id FK
+        varchar country_code
+        varchar state_code
+        decimal rate
+        varchar name
+        varchar tax_type "sales_tax | vat | hst | gst"
+        varchar status
+    }
+
+    tax_exemptions {
+        uuid id PK
+        uuid customer_id FK
+        text reason
+        varchar certificate_id
+        date expires_at
+        timestamp created_at
+    }
+
+    %% ── DUNNING ──────────────────────────────
+    dunning_policies {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        boolean is_default
+        varchar status
+        jsonb retry_schedule "array of day offsets"
+        timestamp created_at
+    }
+
+    dunning_steps {
+        uuid id PK
+        uuid policy_id FK
+        int day_offset
+        varchar action "email | retry | call | suspend | cancel | escalate"
+        varchar template_name
+        varchar subject
+        varchar assignee
+        varchar escalate_to
+        int grace_period_days
+        int sort_order
+    }
+
+    %% ── RATE LIMITING ────────────────────────
+    rate_limit_policies {
+        uuid id PK
+        uuid product_id FK
+        varchar name
+        varchar status
+    }
+
+    rate_limit_rules {
+        uuid id PK
+        uuid policy_id FK
+        varchar endpoint
+        int requests_limit
+        varchar time_window "1m | 1h"
+        int burst_limit
+    }
+
+    %% ── ALERTS & REPORTING ───────────────────
+    alerts {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar alert_type "usage | billing | customer | churn | revenue"
+        varchar condition_expr
+        decimal threshold
+        varchar status "active | paused"
+        timestamp last_triggered_at
+        int trigger_count
+        timestamp created_at
+    }
+
+    alert_channels {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar channel_type "email | slack | webhook | pagerduty"
+        jsonb config
+        varchar status
+    }
+
+    alert_channel_map {
+        uuid id PK
+        uuid alert_id FK
+        uuid channel_id FK
+    }
+
+    alert_history {
+        uuid id PK
+        uuid alert_id FK
+        uuid channel_id FK
+        timestamp triggered_at
+        uuid customer_id FK
+        varchar value_snapshot
+        varchar delivery_status
+    }
+
+    reports {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar report_type "revenue | usage | cohort | contracts"
+        varchar schedule "daily | weekly | monthly"
+        timestamp last_run_at
+        timestamp next_run_at
+        varchar status "active | paused"
+        jsonb recipients
+        jsonb filters
+        jsonb selected_metrics
+        timestamp created_at
+    }
+
+    %% ── INTEGRATIONS & DEVELOPER ─────────────
+    integrations {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar category "payments | accounting | crm | warehouse | data"
+        varchar status "connected | available | error"
+        jsonb config
+        timestamp last_sync_at
+        timestamp created_at
+    }
+
+    webhooks {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar url
+        jsonb subscribed_events "array of event type strings"
+        varchar status "active | paused | failed"
+        decimal success_rate
+        timestamp last_triggered_at
+        timestamp created_at
+    }
+
+    webhook_logs {
+        uuid id PK
+        uuid webhook_id FK
+        varchar event_type
+        varchar delivery_status "success | failed | retrying"
+        int response_code
+        int response_time_ms
+        jsonb payload
+        text error_message
+        int retry_count
+        timestamp created_at
+    }
+
+    api_keys {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar key_prefix
+        varchar key_hash "hashed key"
+        varchar last4
+        varchar environment "production | sandbox"
+        jsonb scopes
+        varchar status "active | revoked"
+        timestamp last_used_at
+        timestamp created_at
+    }
+
+    %% ── AI FEATURES ──────────────────────────
+    anomalies {
+        uuid id PK
+        uuid org_id FK
+        varchar anomaly_type "usage_spike | pattern_change | cost_anomaly | fraud | duplicate"
+        varchar severity "low | medium | high | critical"
+        uuid customer_id FK
+        varchar metric_name
+        varchar value_description
+        varchar status "new | investigating | resolved | blocked | monitoring"
+        text description
+        text recommendation
+        timestamp detected_at
+    }
+
+    recommendations {
+        uuid id PK
+        uuid org_id FK
+        varchar rec_type "plan_optimization | contract | credit | pricing"
+        uuid customer_id FK
+        varchar title
+        text description
+        varchar impact_description
+        int confidence_pct
+        varchar priority "low | medium | high"
+        varchar status "new | accepted | dismissed"
+        timestamp created_at
+    }
+
+    pricing_tests {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar status "draft | running | completed | stopped"
+        date start_date
+        varchar winner_variant
+        int confidence_pct
+        timestamp created_at
+    }
+
+    pricing_test_variants {
+        uuid id PK
+        uuid test_id FK
+        varchar variant_name
+        varchar price_label
+        int customer_count
+        decimal revenue
+        decimal conversion_rate
+    }
+
+    %% ── COMPLIANCE & AUDIT ───────────────────
+    audit_logs {
+        uuid id PK
+        uuid org_id FK
+        varchar actor "user email | system | api_key"
+        varchar actor_name
+        varchar action "resource.verb"
+        varchar resource_label
+        uuid resource_id
+        inet ip_address
+        varchar user_agent
+        varchar status "success | failed"
+        jsonb details
+        timestamp created_at
+    }
+
+    data_retention_policies {
+        uuid id PK
+        uuid org_id FK
+        varchar data_type
+        varchar retention_period
+        boolean auto_delete
+        timestamp last_purge_at
+    }
+
+    gdpr_requests {
+        uuid id PK
+        uuid customer_id FK
+        varchar request_type "data_export | data_deletion | data_rectification"
+        varchar customer_email
+        varchar status "pending_approval | in_progress | completed"
+        varchar data_size
+        timestamp requested_at
+        timestamp completed_at
+    }
+
+    compliance_reports {
+        uuid id PK
+        uuid org_id FK
+        varchar framework "SOC2 | GDPR | PCI_DSS | HIPAA"
+        varchar status "compliant | non_compliant | not_applicable"
+        date last_audit_date
+        date next_audit_date
+        int findings_count
+    }
+
+    discrepancies {
+        uuid id PK
+        uuid org_id FK
+        varchar disc_type "missing_events | duplicate_charge | rate_mismatch | meter_drift"
+        uuid customer_id FK
+        text description
+        varchar status "auto_resolved | pending_review | monitoring"
+        text resolution
+        decimal financial_impact
+        timestamp detected_at
+    }
+
+    migrations {
+        uuid id PK
+        uuid org_id FK
+        varchar source_system
+        varchar status "pending | in_progress | completed | failed"
+        jsonb record_counts
+        int error_count
+        int progress_pct
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    %% ══════════════════════════════════════════
+    %% RELATIONSHIPS
+    %% ══════════════════════════════════════════
+
+    organizations ||--o{ users : "has"
+    organizations ||--o{ roles : "defines"
+    organizations ||--o{ meters : "owns"
+    organizations ||--o{ products : "offers"
+    organizations ||--o{ features : "defines"
+    organizations ||--o{ rate_cards : "creates"
+    organizations ||--o{ customers : "serves"
+    organizations ||--o{ dunning_policies : "configures"
+    organizations ||--o{ tax_regions : "configures"
+    organizations ||--o{ alerts : "sets"
+    organizations ||--o{ alert_channels : "configures"
+    organizations ||--o{ reports : "creates"
+    organizations ||--o{ integrations : "connects"
+    organizations ||--o{ webhooks : "registers"
+    organizations ||--o{ api_keys : "issues"
+    organizations ||--o{ pricing_tests : "runs"
+    organizations ||--o{ audit_logs : "records"
+    organizations ||--o{ data_retention_policies : "defines"
+    organizations ||--o{ compliance_reports : "tracks"
+    organizations ||--o{ anomalies : "detects"
+    organizations ||--o{ recommendations : "generates"
+    organizations ||--o{ discrepancies : "finds"
+    organizations ||--o{ migrations : "executes"
+
+    roles ||--o{ role_permissions : "grants"
+    roles ||--o{ users : "assigned to"
+
+    products ||--o{ product_features : "includes"
+    features ||--o{ product_features : "in"
+    products ||--o{ customers : "subscribed by"
+    products ||--o{ usage_limits : "defines"
+    products ||--o{ rate_limit_policies : "governs"
+
+    meters ||--o{ pricing_models : "priced by"
+    meters ||--o{ rate_card_rates : "rated in"
+    meters ||--o{ usage_limits : "limited by"
+    meters ||--o{ limit_overrides : "overridden for"
+    meters ||--o{ invoice_line_items : "billed via"
+
+    pricing_models ||--o{ pricing_tiers : "has tiers"
+
+    rate_cards ||--o{ rate_card_rates : "contains"
+    rate_cards ||--o{ contracts : "applied to"
+
+    customers ||--o{ contracts : "signs"
+    customers ||--o{ credits : "holds"
+    customers ||--o{ credit_ledger : "transacts"
+    customers ||--o{ invoices : "receives"
+    customers ||--o{ payment_methods : "registers"
+    customers ||--o{ payments : "makes"
+    customers ||--o{ credit_notes : "receives"
+    customers ||--o{ tax_exemptions : "claims"
+    customers ||--o{ entitlement_grants : "receives"
+    customers ||--o{ limit_overrides : "has"
+    customers ||--o{ alert_history : "triggers"
+    customers ||--o{ anomalies : "subject of"
+    customers ||--o{ recommendations : "target of"
+    customers ||--o{ gdpr_requests : "submits"
+    customers ||--o{ discrepancies : "affected by"
+
+    features ||--o{ entitlement_grants : "granted via"
+
+    credits ||--o{ credit_ledger : "tracked in"
+
+    invoices ||--o{ invoice_line_items : "contains"
+    invoices ||--o{ payments : "paid by"
+    invoices ||--o{ credit_notes : "adjusted by"
+    payment_methods ||--o{ invoices : "charges"
+    payment_methods ||--o{ payments : "used in"
+
+    dunning_policies ||--o{ dunning_steps : "defines"
+
+    rate_limit_policies ||--o{ rate_limit_rules : "contains"
+
+    alerts ||--o{ alert_channel_map : "routes to"
+    alert_channels ||--o{ alert_channel_map : "receives from"
+    alerts ||--o{ alert_history : "produces"
+
+    webhooks ||--o{ webhook_logs : "logs"
+
+    pricing_tests ||--o{ pricing_test_variants : "tests"

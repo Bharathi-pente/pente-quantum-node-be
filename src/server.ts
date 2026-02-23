@@ -1,0 +1,63 @@
+import app from './app';
+import logger from './config/logger';
+import prisma from './config/database';
+
+// Port
+const PORT = process.env.PORT || 3000;
+
+// Start server
+const server = app.listen(PORT, () => {
+  logger.info(`
+  ╔═══════════════════════════════════════════════════════════╗
+  ║                                                           ║
+  ║   QuantumBilling API Server                              ║
+  ║   Environment: ${process.env.NODE_ENV?.padEnd(42) || 'development'.padEnd(42)}║
+  ║   Server: http://localhost:${PORT.toString().padEnd(31)}║
+  ║   API Docs: http://localhost:${PORT}/api-docs${' '.repeat(19)}║
+  ║   Health Check: http://localhost:${PORT}/api/v1/health${' '.repeat(11)}║
+  ║                                                           ║
+  ╚═══════════════════════════════════════════════════════════╝
+  `);
+});
+
+// Graceful shutdown
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`\n${signal} received. Starting graceful shutdown...`);
+  
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    
+    try {
+      await prisma.$disconnect();
+      logger.info('Database connection closed');
+      process.exit(0);
+    } catch (error) {
+      logger.error('Error during shutdown:', error);
+      process.exit(1);
+    }
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('UNHANDLED_REJECTION');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+export default server;

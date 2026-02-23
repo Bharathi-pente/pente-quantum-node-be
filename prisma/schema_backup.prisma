@@ -1,0 +1,1095 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model alert_channel_map {
+  id             String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  alert_id       String         @db.Uuid
+  channel_id     String         @db.Uuid
+  alerts         alerts         @relation(fields: [alert_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  alert_channels alert_channels @relation(fields: [channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([alert_id, channel_id])
+  @@index([alert_id], map: "idx_alert_channel_map_alert_id")
+  @@index([channel_id], map: "idx_alert_channel_map_channel_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model alert_channels {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id            String              @db.Uuid
+  name              String              @db.VarChar(255)
+  channel_type      String              @db.VarChar(50)
+  config            Json                @default("{}")
+  status            String              @default("active") @db.VarChar(20)
+  alert_channel_map alert_channel_map[]
+  organizations     organizations       @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  alert_history     alert_history[]
+
+  @@index([channel_type], map: "idx_alert_channels_channel_type")
+  @@index([org_id], map: "idx_alert_channels_org_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model alert_history {
+  id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  alert_id        String          @db.Uuid
+  channel_id      String?         @db.Uuid
+  triggered_at    DateTime        @default(now()) @db.Timestamp(6)
+  customer_id     String?         @db.Uuid
+  value_snapshot  String?         @db.VarChar(255)
+  delivery_status String?         @db.VarChar(50)
+  alerts          alerts          @relation(fields: [alert_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  alert_channels  alert_channels? @relation(fields: [channel_id], references: [id], onUpdate: NoAction)
+  customers       customers?      @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+
+  @@index([alert_id], map: "idx_alert_history_alert_id")
+  @@index([channel_id], map: "idx_alert_history_channel_id")
+  @@index([customer_id], map: "idx_alert_history_customer_id")
+  @@index([triggered_at], map: "idx_alert_history_triggered_at")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model alerts {
+  id                String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id            String              @db.Uuid
+  name              String              @db.VarChar(255)
+  alert_type        String              @db.VarChar(50)
+  condition_expr    String              @db.VarChar(500)
+  threshold         Decimal?            @db.Decimal(12, 2)
+  status            String              @default("active") @db.VarChar(20)
+  last_triggered_at DateTime?           @db.Timestamp(6)
+  trigger_count     Int?                @default(0)
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  alert_channel_map alert_channel_map[]
+  alert_history     alert_history[]
+  organizations     organizations       @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([alert_type], map: "idx_alerts_alert_type")
+  @@index([org_id], map: "idx_alerts_org_id")
+  @@index([status], map: "idx_alerts_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model anomalies {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id            String        @db.Uuid
+  anomaly_type      String        @db.VarChar(50)
+  severity          String        @db.VarChar(20)
+  customer_id       String?       @db.Uuid
+  metric_name       String?       @db.VarChar(255)
+  value_description String?       @db.VarChar(500)
+  status            String        @default("new") @db.VarChar(20)
+  description       String?
+  recommendation    String?
+  detected_at       DateTime      @default(now()) @db.Timestamp(6)
+  customers         customers?    @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  organizations     organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([anomaly_type], map: "idx_anomalies_anomaly_type")
+  @@index([customer_id], map: "idx_anomalies_customer_id")
+  @@index([detected_at], map: "idx_anomalies_detected_at")
+  @@index([org_id], map: "idx_anomalies_org_id")
+  @@index([severity], map: "idx_anomalies_severity")
+  @@index([status], map: "idx_anomalies_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model api_keys {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id        String        @db.Uuid
+  name          String        @db.VarChar(255)
+  key_prefix    String        @db.VarChar(20)
+  key_hash      String        @db.VarChar(255)
+  last4         String        @db.VarChar(4)
+  environment   String        @default("production") @db.VarChar(20)
+  scopes        Json?         @default("[]")
+  status        String        @default("active") @db.VarChar(20)
+  last_used_at  DateTime?     @db.Timestamp(6)
+  created_at    DateTime      @default(now()) @db.Timestamp(6)
+  organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([environment], map: "idx_api_keys_environment")
+  @@index([key_prefix], map: "idx_api_keys_key_prefix")
+  @@index([org_id], map: "idx_api_keys_org_id")
+  @@index([status], map: "idx_api_keys_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_logs {
+  id             String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id         String        @db.Uuid
+  actor          String        @db.VarChar(255)
+  actor_name     String?       @db.VarChar(255)
+  action         String        @db.VarChar(100)
+  resource_label String?       @db.VarChar(255)
+  resource_id    String?       @db.Uuid
+  ip_address     String?       @db.Inet
+  user_agent     String?
+  status         String        @db.VarChar(20)
+  details        Json?         @default("{}")
+  created_at     DateTime      @default(now()) @db.Timestamp(6)
+  organizations  organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([actor], map: "idx_audit_logs_actor")
+  @@index([created_at], map: "idx_audit_logs_created_at")
+  @@index([org_id], map: "idx_audit_logs_org_id")
+  @@index([resource_id], map: "idx_audit_logs_resource_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model compliance_reports {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id          String        @db.Uuid
+  framework       String        @db.VarChar(50)
+  status          String        @db.VarChar(50)
+  last_audit_date DateTime?     @db.Date
+  next_audit_date DateTime?     @db.Date
+  findings_count  Int?          @default(0)
+  organizations   organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([framework], map: "idx_compliance_reports_framework")
+  @@index([org_id], map: "idx_compliance_reports_org_id")
+  @@index([status], map: "idx_compliance_reports_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contracts {
+  id               String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id      String      @db.Uuid
+  name             String      @db.VarChar(255)
+  status           String      @default("active") @db.VarChar(20)
+  contract_type    String      @db.VarChar(20)
+  start_date       DateTime    @db.Date
+  end_date         DateTime?   @db.Date
+  total_value      Decimal     @default(0) @db.Decimal(12, 2)
+  commit_amount    Decimal?    @default(0) @db.Decimal(12, 2)
+  used_amount      Decimal?    @default(0) @db.Decimal(12, 2)
+  remaining_amount Decimal?    @default(0) @db.Decimal(12, 2)
+  rate_card_id     String?     @db.Uuid
+  auto_renew       Boolean?    @default(false)
+  payment_terms    String?     @default("Net 30") @db.VarChar(50)
+  amendment_count  Int?        @default(0)
+  created_at       DateTime    @default(now()) @db.Timestamp(6)
+  customers        customers   @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rate_cards       rate_cards? @relation(fields: [rate_card_id], references: [id], onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_contracts_customer_id")
+  @@index([start_date, end_date], map: "idx_contracts_dates")
+  @@index([rate_card_id], map: "idx_contracts_rate_card_id")
+  @@index([status], map: "idx_contracts_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model credit_ledger {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id     String    @db.Uuid
+  credit_id       String?   @db.Uuid
+  entry_date      DateTime  @db.Date
+  txn_type        String    @db.VarChar(20)
+  amount          Decimal   @db.Decimal(12, 2)
+  running_balance Decimal   @db.Decimal(12, 2)
+  description     String?
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  credits         credits?  @relation(fields: [credit_id], references: [id], onUpdate: NoAction)
+  customers       customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([credit_id], map: "idx_credit_ledger_credit_id")
+  @@index([customer_id], map: "idx_credit_ledger_customer_id")
+  @@index([entry_date], map: "idx_credit_ledger_entry_date")
+  @@index([txn_type], map: "idx_credit_ledger_txn_type")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model credit_notes {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  credit_note_number String    @unique @db.VarChar(50)
+  invoice_id         String?   @db.Uuid
+  customer_id        String    @db.Uuid
+  amount             Decimal   @db.Decimal(12, 2)
+  reason             String?
+  status             String    @default("pending") @db.VarChar(20)
+  issue_date         DateTime  @db.Date
+  applied_date       DateTime? @db.Date
+  customers          customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoices           invoices? @relation(fields: [invoice_id], references: [id], onUpdate: NoAction)
+
+  @@index([credit_note_number], map: "idx_credit_notes_credit_note_number")
+  @@index([customer_id], map: "idx_credit_notes_customer_id")
+  @@index([invoice_id], map: "idx_credit_notes_invoice_id")
+  @@index([status], map: "idx_credit_notes_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model credits {
+  id               String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id      String          @db.Uuid
+  credit_type      String          @db.VarChar(20)
+  original_amount  Decimal         @db.Decimal(12, 2)
+  remaining_amount Decimal         @db.Decimal(12, 2)
+  used_amount      Decimal?        @default(0) @db.Decimal(12, 2)
+  expires_at       DateTime?       @db.Timestamp(6)
+  priority         Int?            @default(0)
+  applicable_to    String?         @default("all") @db.VarChar(255)
+  status           String          @default("active") @db.VarChar(20)
+  reason           String?
+  created_at       DateTime        @default(now()) @db.Timestamp(6)
+  credit_ledger    credit_ledger[]
+  customers        customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_credits_customer_id")
+  @@index([expires_at], map: "idx_credits_expires_at")
+  @@index([priority], map: "idx_credits_priority")
+  @@index([status], map: "idx_credits_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model customers {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id             String               @db.Uuid
+  name               String               @db.VarChar(255)
+  email              String               @db.VarChar(255)
+  product_id         String?              @db.Uuid
+  status             String               @default("active") @db.VarChar(20)
+  mrr                Decimal?             @default(0) @db.Decimal(12, 2)
+  credit_balance     Decimal?             @default(0) @db.Decimal(12, 2)
+  health_score       Int?                 @default(100)
+  logo_initials      String?              @db.VarChar(5)
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  updated_at         DateTime             @default(now()) @db.Timestamp(6)
+  alert_history      alert_history[]
+  anomalies          anomalies[]
+  contracts          contracts[]
+  credit_ledger      credit_ledger[]
+  credit_notes       credit_notes[]
+  credits            credits[]
+  organizations      organizations        @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products           products?            @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  discrepancies      discrepancies[]
+  entitlement_grants entitlement_grants[]
+  gdpr_requests      gdpr_requests[]
+  invoices           invoices[]
+  limit_overrides    limit_overrides[]
+  payment_methods    payment_methods[]
+  payments           payments[]
+  recommendations    recommendations[]
+  tax_exemptions     tax_exemptions[]
+
+  @@index([email], map: "idx_customers_email")
+  @@index([org_id], map: "idx_customers_org_id")
+  @@index([product_id], map: "idx_customers_product_id")
+  @@index([status], map: "idx_customers_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model data_retention_policies {
+  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id           String        @db.Uuid
+  data_type        String        @db.VarChar(100)
+  retention_period String        @db.VarChar(50)
+  auto_delete      Boolean?      @default(false)
+  last_purge_at    DateTime?     @db.Timestamp(6)
+  organizations    organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([data_type], map: "idx_data_retention_policies_data_type")
+  @@index([org_id], map: "idx_data_retention_policies_org_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model discrepancies {
+  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id           String        @db.Uuid
+  disc_type        String        @db.VarChar(50)
+  customer_id      String?       @db.Uuid
+  description      String?
+  status           String        @default("pending_review") @db.VarChar(50)
+  resolution       String?
+  financial_impact Decimal?      @db.Decimal(12, 2)
+  detected_at      DateTime      @default(now()) @db.Timestamp(6)
+  customers        customers?    @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  organizations    organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_discrepancies_customer_id")
+  @@index([detected_at], map: "idx_discrepancies_detected_at")
+  @@index([disc_type], map: "idx_discrepancies_disc_type")
+  @@index([org_id], map: "idx_discrepancies_org_id")
+  @@index([status], map: "idx_discrepancies_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model dunning_policies {
+  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id         String          @db.Uuid
+  name           String          @db.VarChar(255)
+  is_default     Boolean?        @default(false)
+  status         String          @default("active") @db.VarChar(20)
+  retry_schedule Json            @default("[]")
+  created_at     DateTime        @default(now()) @db.Timestamp(6)
+  organizations  organizations   @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  dunning_steps  dunning_steps[]
+
+  @@index([org_id], map: "idx_dunning_policies_org_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model dunning_steps {
+  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  policy_id         String           @db.Uuid
+  day_offset        Int
+  action            String           @db.VarChar(50)
+  template_name     String?          @db.VarChar(255)
+  subject           String?          @db.VarChar(500)
+  assignee          String?          @db.VarChar(255)
+  escalate_to       String?          @db.VarChar(255)
+  grace_period_days Int?             @default(0)
+  sort_order        Int              @default(0)
+  dunning_policies  dunning_policies @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([policy_id], map: "idx_dunning_steps_policy_id")
+  @@index([sort_order], map: "idx_dunning_steps_sort_order")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entitlement_grants {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id String    @db.Uuid
+  feature_id  String    @db.Uuid
+  reason      String?
+  expires_at  DateTime? @db.Timestamp(6)
+  granted_at  DateTime  @default(now()) @db.Timestamp(6)
+  granted_by  String?   @db.VarChar(255)
+  customers   customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  features    features  @relation(fields: [feature_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_entitlement_grants_customer_id")
+  @@index([expires_at], map: "idx_entitlement_grants_expires_at")
+  @@index([feature_id], map: "idx_entitlement_grants_feature_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model features {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id             String               @db.Uuid
+  name               String               @db.VarChar(255)
+  description        String?
+  category           String               @db.VarChar(50)
+  status             String               @default("active") @db.VarChar(20)
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  entitlement_grants entitlement_grants[]
+  organizations      organizations        @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_features   product_features[]
+
+  @@unique([org_id, name])
+  @@index([category], map: "idx_features_category")
+  @@index([org_id], map: "idx_features_org_id")
+  @@index([status], map: "idx_features_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model gdpr_requests {
+  id             String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id    String?    @db.Uuid
+  request_type   String     @db.VarChar(50)
+  customer_email String     @db.VarChar(255)
+  status         String     @default("pending_approval") @db.VarChar(50)
+  data_size      String?    @db.VarChar(50)
+  requested_at   DateTime   @default(now()) @db.Timestamp(6)
+  completed_at   DateTime?  @db.Timestamp(6)
+  customers      customers? @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+
+  @@index([customer_email], map: "idx_gdpr_requests_customer_email")
+  @@index([customer_id], map: "idx_gdpr_requests_customer_id")
+  @@index([request_type], map: "idx_gdpr_requests_request_type")
+  @@index([status], map: "idx_gdpr_requests_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model integrations {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id        String        @db.Uuid
+  name          String        @db.VarChar(255)
+  category      String        @db.VarChar(50)
+  status        String        @default("available") @db.VarChar(20)
+  config        Json?         @default("{}")
+  last_sync_at  DateTime?     @db.Timestamp(6)
+  created_at    DateTime      @default(now()) @db.Timestamp(6)
+  organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([category], map: "idx_integrations_category")
+  @@index([org_id], map: "idx_integrations_org_id")
+  @@index([status], map: "idx_integrations_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model invoice_line_items {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoice_id  String   @db.Uuid
+  description String
+  meter_id    String?  @db.Uuid
+  quantity    BigInt?  @default(0)
+  unit_price  Decimal  @db.Decimal(12, 4)
+  amount      Decimal  @db.Decimal(12, 2)
+  model_name  String?  @db.VarChar(100)
+  sort_order  Int?     @default(0)
+  invoices    invoices @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meters      meters?  @relation(fields: [meter_id], references: [id], onUpdate: NoAction)
+
+  @@index([invoice_id], map: "idx_invoice_line_items_invoice_id")
+  @@index([meter_id], map: "idx_invoice_line_items_meter_id")
+  @@index([sort_order], map: "idx_invoice_line_items_sort_order")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model invoices {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoice_number     String               @unique @db.VarChar(50)
+  customer_id        String               @db.Uuid
+  status             String               @default("draft") @db.VarChar(20)
+  issue_date         DateTime             @db.Date
+  due_date           DateTime             @db.Date
+  paid_date          DateTime?            @db.Date
+  subtotal           Decimal              @default(0) @db.Decimal(12, 2)
+  credits_applied    Decimal?             @default(0) @db.Decimal(12, 2)
+  tax_amount         Decimal?             @default(0) @db.Decimal(12, 2)
+  tax_rate           Decimal?             @default(0) @db.Decimal(5, 4)
+  total              Decimal              @default(0) @db.Decimal(12, 2)
+  currency           String?              @default("USD") @db.VarChar(3)
+  payment_method_id  String?              @db.Uuid
+  notes              String?
+  dunning_step       Int?                 @default(0)
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  credit_notes       credit_notes[]
+  invoice_line_items invoice_line_items[]
+  customers          customers            @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  payment_methods    payment_methods?     @relation(fields: [payment_method_id], references: [id], onUpdate: NoAction)
+  payments           payments[]
+
+  @@index([customer_id], map: "idx_invoices_customer_id")
+  @@index([due_date], map: "idx_invoices_due_date")
+  @@index([invoice_number], map: "idx_invoices_invoice_number")
+  @@index([issue_date], map: "idx_invoices_issue_date")
+  @@index([payment_method_id], map: "idx_invoices_payment_method_id")
+  @@index([status], map: "idx_invoices_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model limit_overrides {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id    String    @db.Uuid
+  meter_id       String    @db.Uuid
+  original_limit BigInt
+  new_limit      BigInt
+  reason         String?
+  expires_at     DateTime? @db.Timestamp(6)
+  created_by     String?   @db.VarChar(255)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  customers      customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meters         meters    @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_limit_overrides_customer_id")
+  @@index([expires_at], map: "idx_limit_overrides_expires_at")
+  @@index([meter_id], map: "idx_limit_overrides_meter_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model meters {
+  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id             String               @db.Uuid
+  name               String               @db.VarChar(255)
+  event_type         String               @db.VarChar(100)
+  aggregation        String               @db.VarChar(20)
+  field              String               @db.VarChar(100)
+  status             String               @default("active") @db.VarChar(20)
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  invoice_line_items invoice_line_items[]
+  limit_overrides    limit_overrides[]
+  organizations      organizations        @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pricing_models     pricing_models[]
+  rate_card_rates    rate_card_rates[]
+  usage_limits       usage_limits[]
+
+  @@unique([org_id, name])
+  @@index([event_type], map: "idx_meters_event_type")
+  @@index([org_id], map: "idx_meters_org_id")
+  @@index([status], map: "idx_meters_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model migrations {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id        String        @db.Uuid
+  source_system String        @db.VarChar(255)
+  status        String        @default("pending") @db.VarChar(50)
+  record_counts Json?         @default("{}")
+  error_count   Int?          @default(0)
+  progress_pct  Int?          @default(0)
+  started_at    DateTime?     @db.Timestamp(6)
+  completed_at  DateTime?     @db.Timestamp(6)
+  organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([org_id], map: "idx_migrations_org_id")
+  @@index([started_at], map: "idx_migrations_started_at")
+  @@index([status], map: "idx_migrations_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model organizations {
+  id                      String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                    String                    @db.VarChar(255)
+  slug                    String                    @unique @db.VarChar(100)
+  billing_email           String                    @db.VarChar(255)
+  status                  String                    @default("active") @db.VarChar(20)
+  settings                Json?                     @default("{}")
+  created_at              DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime                  @default(now()) @db.Timestamp(6)
+  alert_channels          alert_channels[]
+  alerts                  alerts[]
+  anomalies               anomalies[]
+  api_keys                api_keys[]
+  audit_logs              audit_logs[]
+  compliance_reports      compliance_reports[]
+  customers               customers[]
+  data_retention_policies data_retention_policies[]
+  discrepancies           discrepancies[]
+  dunning_policies        dunning_policies[]
+  features                features[]
+  integrations            integrations[]
+  meters                  meters[]
+  migrations              migrations[]
+  pricing_models          pricing_models[]
+  pricing_tests           pricing_tests[]
+  products                products[]
+  rate_cards              rate_cards[]
+  recommendations         recommendations[]
+  reports                 reports[]
+  roles                   roles[]
+  tax_regions             tax_regions[]
+  users                   users[]
+  webhooks                webhooks[]
+
+  @@index([slug], map: "idx_organizations_slug")
+  @@index([status], map: "idx_organizations_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payment_methods {
+  id              String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id     String     @db.Uuid
+  method_type     String     @db.VarChar(20)
+  brand           String?    @db.VarChar(50)
+  last4           String?    @db.VarChar(4)
+  exp_month       Int?
+  exp_year        Int?
+  bank_name       String?    @db.VarChar(255)
+  account_type    String?    @db.VarChar(50)
+  is_default      Boolean?   @default(false)
+  status          String     @default("active") @db.VarChar(20)
+  billing_name    String?    @db.VarChar(255)
+  billing_address Json?
+  created_at      DateTime   @default(now()) @db.Timestamp(6)
+  invoices        invoices[]
+  customers       customers  @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  payments        payments[]
+
+  @@index([customer_id], map: "idx_payment_methods_customer_id")
+  @@index([status], map: "idx_payment_methods_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payments {
+  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoice_id        String?          @db.Uuid
+  customer_id       String           @db.Uuid
+  amount            Decimal          @db.Decimal(12, 2)
+  currency          String?          @default("USD") @db.VarChar(3)
+  status            String           @default("pending") @db.VarChar(20)
+  payment_method_id String?          @db.Uuid
+  payment_date      DateTime         @default(now()) @db.Timestamp(6)
+  description       String?
+  failure_reason    String?
+  created_at        DateTime         @default(now()) @db.Timestamp(6)
+  customers         customers        @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoices          invoices?        @relation(fields: [invoice_id], references: [id], onUpdate: NoAction)
+  payment_methods   payment_methods? @relation(fields: [payment_method_id], references: [id], onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_payments_customer_id")
+  @@index([invoice_id], map: "idx_payments_invoice_id")
+  @@index([payment_date], map: "idx_payments_payment_date")
+  @@index([payment_method_id], map: "idx_payments_payment_method_id")
+  @@index([status], map: "idx_payments_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pricing_models {
+  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id        String          @db.Uuid
+  name          String          @db.VarChar(255)
+  pricing_type  String          @db.VarChar(20)
+  meter_id      String?         @db.Uuid
+  unit_price    Decimal?        @db.Decimal(12, 4)
+  unit_label    String?         @db.VarChar(50)
+  status        String          @default("active") @db.VarChar(20)
+  created_at    DateTime        @default(now()) @db.Timestamp(6)
+  meters        meters?         @relation(fields: [meter_id], references: [id], onUpdate: NoAction)
+  organizations organizations   @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pricing_tiers pricing_tiers[]
+
+  @@index([meter_id], map: "idx_pricing_models_meter_id")
+  @@index([org_id], map: "idx_pricing_models_org_id")
+  @@index([status], map: "idx_pricing_models_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pricing_test_variants {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  test_id         String        @db.Uuid
+  variant_name    String        @db.VarChar(100)
+  price_label     String?       @db.VarChar(255)
+  customer_count  Int?          @default(0)
+  revenue         Decimal?      @default(0) @db.Decimal(12, 2)
+  conversion_rate Decimal?      @default(0) @db.Decimal(5, 2)
+  pricing_tests   pricing_tests @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([test_id], map: "idx_pricing_test_variants_test_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pricing_tests {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id                String                  @db.Uuid
+  name                  String                  @db.VarChar(255)
+  status                String                  @default("draft") @db.VarChar(20)
+  start_date            DateTime?               @db.Date
+  winner_variant        String?                 @db.VarChar(100)
+  confidence_pct        Int?
+  created_at            DateTime                @default(now()) @db.Timestamp(6)
+  pricing_test_variants pricing_test_variants[]
+  organizations         organizations           @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([org_id], map: "idx_pricing_tests_org_id")
+  @@index([status], map: "idx_pricing_tests_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pricing_tiers {
+  id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  pricing_model_id String         @db.Uuid
+  from_qty         BigInt
+  to_qty           BigInt?
+  price_per_unit   Decimal        @db.Decimal(12, 4)
+  sort_order       Int            @default(0)
+  pricing_models   pricing_models @relation(fields: [pricing_model_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pricing_model_id], map: "idx_pricing_tiers_pricing_model_id")
+  @@index([sort_order], map: "idx_pricing_tiers_sort_order")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model product_features {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id String   @db.Uuid
+  feature_id String   @db.Uuid
+  features   features @relation(fields: [feature_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([product_id, feature_id])
+  @@index([feature_id], map: "idx_product_features_feature_id")
+  @@index([product_id], map: "idx_product_features_product_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model products {
+  id                  String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id              String                @db.Uuid
+  name                String                @db.VarChar(255)
+  description         String?
+  base_price          Decimal               @default(0) @db.Decimal(12, 2)
+  included_units      Json?                 @default("{}")
+  status              String                @default("active") @db.VarChar(20)
+  created_at          DateTime              @default(now()) @db.Timestamp(6)
+  customers           customers[]
+  product_features    product_features[]
+  organizations       organizations         @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rate_limit_policies rate_limit_policies[]
+  usage_limits        usage_limits[]
+
+  @@unique([org_id, name])
+  @@index([org_id], map: "idx_products_org_id")
+  @@index([status], map: "idx_products_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model rate_card_rates {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  rate_card_id String     @db.Uuid
+  meter_id     String?    @db.Uuid
+  model_name   String?    @db.VarChar(100)
+  rate         Decimal    @db.Decimal(12, 4)
+  unit_label   String?    @db.VarChar(50)
+  meters       meters?    @relation(fields: [meter_id], references: [id], onUpdate: NoAction)
+  rate_cards   rate_cards @relation(fields: [rate_card_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([meter_id], map: "idx_rate_card_rates_meter_id")
+  @@index([model_name], map: "idx_rate_card_rates_model_name")
+  @@index([rate_card_id], map: "idx_rate_card_rates_rate_card_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model rate_cards {
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id          String            @db.Uuid
+  name            String            @db.VarChar(255)
+  version         Int               @default(1)
+  status          String            @default("draft") @db.VarChar(20)
+  effective_date  DateTime          @db.Date
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  contracts       contracts[]
+  rate_card_rates rate_card_rates[]
+  organizations   organizations     @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([org_id, name, version])
+  @@index([effective_date], map: "idx_rate_cards_effective_date")
+  @@index([org_id], map: "idx_rate_cards_org_id")
+  @@index([status], map: "idx_rate_cards_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model rate_limit_policies {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id       String             @db.Uuid
+  name             String             @db.VarChar(255)
+  status           String             @default("active") @db.VarChar(20)
+  products         products           @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rate_limit_rules rate_limit_rules[]
+
+  @@index([product_id], map: "idx_rate_limit_policies_product_id")
+  @@index([status], map: "idx_rate_limit_policies_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model rate_limit_rules {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  policy_id           String              @db.Uuid
+  endpoint            String              @db.VarChar(255)
+  requests_limit      Int
+  time_window         String              @db.VarChar(10)
+  burst_limit         Int?
+  rate_limit_policies rate_limit_policies @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([endpoint], map: "idx_rate_limit_rules_endpoint")
+  @@index([policy_id], map: "idx_rate_limit_rules_policy_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model recommendations {
+  id                 String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id             String        @db.Uuid
+  rec_type           String        @db.VarChar(50)
+  customer_id        String?       @db.Uuid
+  title              String        @db.VarChar(255)
+  description        String?
+  impact_description String?       @db.VarChar(500)
+  confidence_pct     Int?
+  priority           String        @db.VarChar(20)
+  status             String        @default("new") @db.VarChar(20)
+  created_at         DateTime      @default(now()) @db.Timestamp(6)
+  customers          customers?    @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  organizations      organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_recommendations_customer_id")
+  @@index([org_id], map: "idx_recommendations_org_id")
+  @@index([priority], map: "idx_recommendations_priority")
+  @@index([rec_type], map: "idx_recommendations_rec_type")
+  @@index([status], map: "idx_recommendations_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model reports {
+  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id           String        @db.Uuid
+  name             String        @db.VarChar(255)
+  report_type      String        @db.VarChar(50)
+  schedule         String        @db.VarChar(20)
+  last_run_at      DateTime?     @db.Timestamp(6)
+  next_run_at      DateTime?     @db.Timestamp(6)
+  status           String        @default("active") @db.VarChar(20)
+  recipients       Json          @default("[]")
+  filters          Json?         @default("{}")
+  selected_metrics Json?         @default("[]")
+  created_at       DateTime      @default(now()) @db.Timestamp(6)
+  organizations    organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([next_run_at], map: "idx_reports_next_run_at")
+  @@index([org_id], map: "idx_reports_org_id")
+  @@index([report_type], map: "idx_reports_report_type")
+  @@index([status], map: "idx_reports_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model role_permissions {
+  id         String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  role_id    String @db.Uuid
+  permission String @db.VarChar(100)
+  roles      roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([role_id, permission])
+  @@index([role_id], map: "idx_role_permissions_role_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model roles {
+  id               String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id           String             @db.Uuid
+  name             String             @db.VarChar(100)
+  description      String?
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  role_permissions role_permissions[]
+  organizations    organizations      @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users            users[]
+
+  @@unique([org_id, name])
+  @@index([org_id], map: "idx_roles_org_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tax_exemptions {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id    String    @db.Uuid
+  reason         String
+  certificate_id String?   @db.VarChar(100)
+  expires_at     DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  customers      customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_tax_exemptions_customer_id")
+  @@index([expires_at], map: "idx_tax_exemptions_expires_at")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tax_regions {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id        String        @db.Uuid
+  country_code  String        @db.VarChar(2)
+  state_code    String?       @db.VarChar(10)
+  rate          Decimal       @db.Decimal(5, 4)
+  name          String        @db.VarChar(255)
+  tax_type      String        @db.VarChar(50)
+  status        String        @default("active") @db.VarChar(20)
+  organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([country_code, state_code], map: "idx_tax_regions_country_state")
+  @@index([org_id], map: "idx_tax_regions_org_id")
+  @@index([status], map: "idx_tax_regions_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model usage_limits {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id            String   @db.Uuid
+  meter_id              String   @db.Uuid
+  limit_type            String   @db.VarChar(20)
+  limit_value           BigInt
+  period                String   @db.VarChar(20)
+  warning_threshold_pct Int?     @default(80)
+  status                String   @default("active") @db.VarChar(20)
+  meters                meters   @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products              products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([product_id, meter_id])
+  @@index([meter_id], map: "idx_usage_limits_meter_id")
+  @@index([product_id], map: "idx_usage_limits_product_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id          String        @db.Uuid
+  name            String        @db.VarChar(255)
+  email           String        @unique @db.VarChar(255)
+  role_id         String?       @db.Uuid
+  status          String        @default("invited") @db.VarChar(20)
+  avatar_initials String?       @db.VarChar(5)
+  last_active_at  DateTime?     @db.Timestamp(6)
+  created_at      DateTime      @default(now()) @db.Timestamp(6)
+  organizations   organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles           roles?        @relation(fields: [role_id], references: [id], onUpdate: NoAction)
+
+  @@index([email], map: "idx_users_email")
+  @@index([org_id], map: "idx_users_org_id")
+  @@index([role_id], map: "idx_users_role_id")
+  @@index([status], map: "idx_users_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model webhook_logs {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  webhook_id       String   @db.Uuid
+  event_type       String   @db.VarChar(100)
+  delivery_status  String   @db.VarChar(20)
+  response_code    Int?
+  response_time_ms Int?
+  payload          Json?
+  error_message    String?
+  retry_count      Int?     @default(0)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  webhooks         webhooks @relation(fields: [webhook_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_webhook_logs_created_at")
+  @@index([delivery_status], map: "idx_webhook_logs_delivery_status")
+  @@index([event_type], map: "idx_webhook_logs_event_type")
+  @@index([webhook_id], map: "idx_webhook_logs_webhook_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model webhooks {
+  id                String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id            String         @db.Uuid
+  name              String         @db.VarChar(255)
+  url               String         @db.VarChar(1000)
+  subscribed_events Json           @default("[]")
+  status            String         @default("active") @db.VarChar(20)
+  success_rate      Decimal?       @default(100.00) @db.Decimal(5, 2)
+  last_triggered_at DateTime?      @db.Timestamp(6)
+  created_at        DateTime       @default(now()) @db.Timestamp(6)
+  webhook_logs      webhook_logs[]
+  organizations     organizations  @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([org_id], map: "idx_webhooks_org_id")
+  @@index([status], map: "idx_webhooks_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payment_methods {
+  id             String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id    String     @db.Uuid
+  method_type    String     @db.VarChar(50)
+  brand          String?    @db.VarChar(50)
+  last4          String?    @db.VarChar(4)
+  exp_month      Int?
+  exp_year       Int?
+  bank_name      String?    @db.VarChar(255)
+  account_type   String?    @db.VarChar(50)
+  is_default     Boolean    @default(false)
+  status         String     @default("active") @db.VarChar(20)
+  billing_name   String?    @db.VarChar(255)
+  billing_address Json      @default("{}")
+  created_at     DateTime   @default(now()) @db.Timestamp(6)
+  customers      customers  @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoices       invoices[]
+  payments       payments[]
+
+  @@index([customer_id], map: "idx_payment_methods_customer_id")
+  @@index([method_type], map: "idx_payment_methods_method_type")
+  @@index([status], map: "idx_payment_methods_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payments {
+  id                String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  invoice_id        String          @db.Uuid
+  customer_id       String          @db.Uuid
+  amount            Decimal         @db.Decimal(12, 2)
+  currency          String          @default("USD") @db.VarChar(3)
+  status            String          @default("pending") @db.VarChar(20)
+  payment_method_id String          @db.Uuid
+  payment_date      DateTime        @default(now()) @db.Timestamp(6)
+  description       String?
+  failure_reason    String?
+  created_at        DateTime        @default(now()) @db.Timestamp(6)
+  customers         customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  invoices          invoices        @relation(fields: [invoice_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  payment_methods   payment_methods @relation(fields: [payment_method_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_payments_customer_id")
+  @@index([invoice_id], map: "idx_payments_invoice_id")
+  @@index([payment_method_id], map: "idx_payments_payment_method_id")
+  @@index([status], map: "idx_payments_status")
+  @@index([payment_date], map: "idx_payments_payment_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model usage_limits {
+  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id            String   @db.Uuid
+  meter_id              String   @db.Uuid
+  limit_type            String   @db.VarChar(20)
+  limit_value           BigInt
+  period                String   @db.VarChar(20)
+  warning_threshold_pct Int?     @default(80)
+  status                String   @default("active") @db.VarChar(20)
+  meters                meters   @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products              products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([product_id, meter_id])
+  @@index([meter_id], map: "idx_usage_limits_meter_id")
+  @@index([product_id], map: "idx_usage_limits_product_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model limit_overrides {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id    String    @db.Uuid
+  meter_id       String    @db.Uuid
+  original_limit BigInt
+  new_limit      BigInt
+  reason         String?
+  expires_at     DateTime? @db.Timestamp(6)
+  created_by     String?   @db.VarChar(255)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  customers      customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meters         meters    @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_limit_overrides_customer_id")
+  @@index([expires_at], map: "idx_limit_overrides_expires_at")
+  @@index([meter_id], map: "idx_limit_overrides_meter_id")
+}
