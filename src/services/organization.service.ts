@@ -34,11 +34,25 @@ export class OrganizationService {
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: {
+          _count: {
+            select: {
+              customers: true,
+            },
+          },
+        },
       }),
       prisma.organizations.count({ where }),
     ]);
 
-    return { organizations, total, page, limit };
+    // Transform the data to include customer count
+    const transformedOrganizations = organizations.map(org => ({
+      ...org,
+      customers: org._count.customers,
+      _count: undefined, // Remove the _count field
+    }));
+
+    return { organizations: transformedOrganizations, total, page, limit };
   }
 
   async findById(id: string) {

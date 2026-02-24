@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import userController from '../controllers/user.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createUserSchema,
@@ -22,7 +22,7 @@ router.post(
 );
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   GET /api/v1/users
@@ -45,7 +45,7 @@ router.get('/:id', validate(getUserSchema), userController.getById);
  */
 router.put(
   '/:id',
-  authorize('users.update'),
+  requireRole('admin'),
   validate(updateUserSchema),
   userController.update
 );
@@ -57,7 +57,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('users.delete'),
+  requireRole('admin'),
   validate(getUserSchema),
   userController.delete
 );

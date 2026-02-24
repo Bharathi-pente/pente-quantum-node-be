@@ -3,35 +3,38 @@ import authController from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
 import { loginSchema, createUserSchema } from '../validators/user.validator';
 import { authLimiter } from '../middleware/rateLimiter.middleware';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
 /**
  * @route   POST /api/v1/auth/login
- * @desc    Login user
+ * @desc    Login user (DEPRECATED - use Keycloak)
  * @access  Public
+ * @deprecated Use Keycloak authentication instead
  */
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @route   POST /api/v1/auth/register
- * @desc    Register new user
+ * @desc    Register new user (DEPRECATED - use Keycloak)
  * @access  Public
+ * @deprecated Use Keycloak user management instead
  */
 router.post('/register', authLimiter, validate(createUserSchema), authController.register);
 
 /**
  * @route   GET /api/v1/auth/me
- * @desc    Get current user
+ * @desc    Get current user from Keycloak token
  * @access  Private
  */
-router.get('/me', authenticate, authController.getCurrentUser);
+router.get('/me', authenticateKeycloak, authController.getCurrentUser);
 
 /**
  * @route   POST /api/v1/auth/validate
- * @desc    Validate JWT token
+ * @desc    Validate JWT token (DEPRECATED - Keycloak handles this)
  * @access  Public
+ * @deprecated Token validation is handled by Keycloak middleware
  */
 router.post('/validate', authController.validateToken);
 

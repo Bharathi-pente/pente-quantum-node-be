@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import featureController from '../controllers/feature.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createFeatureSchema,
@@ -11,7 +11,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   POST /api/v1/features
@@ -20,7 +20,7 @@ router.use(authenticate);
  */
 router.post(
   '/',
-  authorize('features.create'),
+  requireRole('admin'),
   validate(createFeatureSchema),
   featureController.create
 );
@@ -46,7 +46,7 @@ router.get('/:id', validate(getFeatureSchema), featureController.getById);
  */
 router.put(
   '/:id',
-  authorize('features.update'),
+  requireRole('admin'),
   validate(updateFeatureSchema),
   featureController.update
 );
@@ -58,7 +58,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('features.delete'),
+  requireRole('admin'),
   validate(getFeatureSchema),
   featureController.delete
 );

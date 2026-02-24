@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCustomerSchema,
@@ -24,7 +24,7 @@ router.post(
 );
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   GET /api/v1/customers
@@ -47,7 +47,7 @@ router.get('/:id', validate(getCustomerSchema), customerController.getById);
  */
 router.put(
   '/:id',
-  authorize('customers.update'),
+  requireRole('admin'),
   validate(updateCustomerSchema),
   customerController.update
 );
@@ -59,7 +59,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('customers.delete'),
+  requireRole('admin'),
   validate(getCustomerSchema),
   customerController.delete
 );

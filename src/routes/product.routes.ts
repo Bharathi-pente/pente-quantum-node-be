@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import productController from '../controllers/product.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createProductSchema,
@@ -22,7 +22,7 @@ router.post(
 );
 
 // All other routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   GET /api/v1/products
@@ -45,7 +45,7 @@ router.get('/:id', validate(getProductSchema), productController.getById);
  */
 router.put(
   '/:id',
-  authorize('products.update'),
+  requireRole('admin'),
   validate(updateProductSchema),
   productController.update
 );
@@ -57,7 +57,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('products.delete'),
+  requireRole('admin'),
   validate(getProductSchema),
   productController.delete
 );
@@ -67,13 +67,13 @@ router.delete(
  * @desc    Add feature to product
  * @access  Private (admin)
  */
-router.post('/:id/features/:featureId', authorize('products.update'), productController.addFeature);
+router.post('/:id/features/:featureId', requireRole('admin'), productController.addFeature);
 
 /**
  * @route   DELETE /api/v1/products/:id/features/:featureId
  * @desc    Remove feature from product
  * @access  Private (admin)
  */
-router.delete('/:id/features/:featureId', authorize('products.update'), productController.removeFeature);
+router.delete('/:id/features/:featureId', requireRole('admin'), productController.removeFeature);
 
 export default router;

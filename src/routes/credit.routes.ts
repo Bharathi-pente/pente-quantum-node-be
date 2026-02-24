@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CreditController } from '../controllers/credit.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCreditSchema,
@@ -14,7 +14,7 @@ import {
 const router = Router();
 
 // All credit routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @swagger

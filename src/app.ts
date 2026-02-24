@@ -12,6 +12,8 @@ dotenv.config();
 // Import configurations
 import logger from './config/logger';
 import { swaggerSpec } from './config/swagger';
+import { initializeSentry } from './config/sentry';
+import { setupExpressErrorHandler } from '@sentry/node';
 
 // Import routes
 import routes from './routes';
@@ -19,9 +21,27 @@ import routes from './routes';
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
+import { performanceMonitor } from './middleware/performance.middleware';
+
+// Initialize Sentry
+initializeSentry();
 
 // Create Express app
 const app: Application = express();
+
+// ═══════════════════════════════════════════
+// SENTRY REQUEST HANDLER (must be first)
+// ═══════════════════════════════════════════
+
+if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+  // Sentry automatically instruments Express with setupExpressErrorHandler
+}
+
+// ═══════════════════════════════════════════
+// PERFORMANCE MONITORING
+// ═══════════════════════════════════════════
+
+app.use(performanceMonitor);
 
 // ═══════════════════════════════════════════
 // MIDDLEWARE
@@ -95,6 +115,11 @@ app.use('/api/v1', routes);
 
 // 404 handler
 app.use(notFound);
+
+// Sentry error handler (must be before other error handlers)
+if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+  setupExpressErrorHandler(app);
+}
 
 // Global error handler
 app.use(errorHandler);

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import pricingModelController from '../controllers/pricingModel.controller';
+import { PricingModelController } from '../controllers/pricingModel.controller';
 import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
@@ -9,13 +9,14 @@ import {
 } from '../validators/pricingModel.validator';
 
 const router = Router();
+const pricingModelController = new PricingModelController();
 
 // All routes require authentication
 router.use(authenticateKeycloak);
 
 /**
- * @route   POST /api/v1/pricing-models
- * @desc    Create pricing model
+ * @route   POST /api/v1/rate-cards
+ * @desc    Create rate card (alias for pricing model)
  * @access  Private (admin)
  */
 router.post(
@@ -26,22 +27,26 @@ router.post(
 );
 
 /**
- * @route   GET /api/v1/pricing-models
- * @desc    Get all pricing models
+ * @route   GET /api/v1/rate-cards
+ * @desc    Get all rate cards (alias for pricing models)
  * @access  Private
  */
 router.get('/', pricingModelController.getAll);
 
 /**
- * @route   GET /api/v1/pricing-models/:id
- * @desc    Get pricing model by ID
+ * @route   GET /api/v1/rate-cards/:id
+ * @desc    Get rate card by ID
  * @access  Private
  */
-router.get('/:id', validate(getPricingModelSchema), pricingModelController.getById);
+router.get(
+  '/:id',
+  validate(getPricingModelSchema),
+  pricingModelController.getById
+);
 
 /**
- * @route   PUT /api/v1/pricing-models/:id
- * @desc    Update pricing model
+ * @route   PUT /api/v1/rate-cards/:id
+ * @desc    Update rate card
  * @access  Private (admin)
  */
 router.put(
@@ -52,14 +57,13 @@ router.put(
 );
 
 /**
- * @route   DELETE /api/v1/pricing-models/:id
- * @desc    Delete pricing model
+ * @route   DELETE /api/v1/rate-cards/:id
+ * @desc    Delete rate card
  * @access  Private (admin)
  */
 router.delete(
   '/:id',
   requireRole('admin'),
-  validate(getPricingModelSchema),
   pricingModelController.delete
 );
 

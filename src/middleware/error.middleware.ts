@@ -20,6 +20,11 @@ export const errorHandler = (
 
   // Log error
   logger.error(`[${req.method}] ${req.path} >> StatusCode: ${statusCode}, Message: ${message}`);
+  
+  // Log stack trace for debugging
+  if (process.env.NODE_ENV === 'development') {
+    logger.error('Error stack:', err.stack);
+  }
 
   // Send response
   res.status(statusCode).json({
@@ -31,10 +36,18 @@ export const errorHandler = (
     }),
   });
 
-  // If not operational, exit process
-  if (!isOperational) {
-    logger.error('Non-operational error detected. Shutting down...');
-    process.exit(1);
+  // Only exit process for truly critical non-operational errors
+  // Don't exit for request-level errors (let nodemon restart on file changes instead)
+  if (!isOperational && statusCode >= 500) {
+    logger.error('Critical non-operational error detected.');
+    // In production, you might want to exit here
+    // In development, just log and continue
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Shutting down...');
+      process.exit(1);
+    } else {
+      logger.warn('Development mode: Not exiting process. Fix the error and save to restart.');
+    }
   }
 };
 

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest } from '../middleware/keycloakAuth.middleware';
 import invoiceService from '../services/invoice.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
@@ -142,7 +142,7 @@ export class InvoiceController {
     const limit = parseInt(req.query.limit as string) || 10;
     const filters = {
       status: req.query.status as string,
-      customer_id: req.query.customer_id as string,
+      customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
       invoice_number: req.query.invoice_number as string,
       date_from: req.query.date_from as string,
       date_to: req.query.date_to as string,

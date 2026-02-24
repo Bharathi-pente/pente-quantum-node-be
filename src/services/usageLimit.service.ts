@@ -79,6 +79,18 @@ export class UsageLimitService {
       },
     };
 
+    // If customer_id is provided, filter by customer's products
+    if (filters.customer_id) {
+      where.products = {
+        ...where.products,
+        customers: {
+          some: {
+            id: filters.customer_id,
+          },
+        },
+      };
+    }
+
     if (filters.product_id) {
       where.product_id = filters.product_id;
     }

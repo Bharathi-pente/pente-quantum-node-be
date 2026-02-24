@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import paymentController from '../controllers/payment.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { createPaymentSchema, updatePaymentSchema, getPaymentSchema, getPaymentsQuerySchema } from '../validators/payment.validator';
 
@@ -36,7 +36,7 @@ const router = Router();
  *       404:
  *         description: Invoice or payment method not found
  */
-router.post('/', authenticate, validate(createPaymentSchema), paymentController.create);
+router.post('/', authenticateKeycloak, validate(createPaymentSchema), paymentController.create);
 
 /**
  * @swagger
@@ -132,7 +132,7 @@ router.post('/', authenticate, validate(createPaymentSchema), paymentController.
  *       403:
  *         description: Forbidden
  */
-router.get('/', authenticate, validate(getPaymentsQuerySchema), paymentController.getAll);
+router.get('/', authenticateKeycloak, validate(getPaymentsQuerySchema), paymentController.getAll);
 
 /**
  * @swagger
@@ -164,7 +164,7 @@ router.get('/', authenticate, validate(getPaymentsQuerySchema), paymentControlle
  *       404:
  *         description: Payment not found
  */
-router.get('/:id', authenticate, validate(getPaymentSchema), paymentController.getById);
+router.get('/:id', authenticateKeycloak, validate(getPaymentSchema), paymentController.getById);
 
 /**
  * @swagger
@@ -204,7 +204,7 @@ router.get('/:id', authenticate, validate(getPaymentSchema), paymentController.g
  *       404:
  *         description: Payment not found
  */
-router.put('/:id', authenticate, validate(updatePaymentSchema), paymentController.update);
+router.put('/:id', authenticateKeycloak, validate(updatePaymentSchema), paymentController.update);
 
 /**
  * @swagger
@@ -247,6 +247,6 @@ router.put('/:id', authenticate, validate(updatePaymentSchema), paymentControlle
  *       409:
  *         description: Cannot delete succeeded payment
  */
-router.delete('/:id', authenticate, paymentController.delete);
+router.delete('/:id', authenticateKeycloak, paymentController.delete);
 
 export default router;

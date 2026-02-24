@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import authRoutes from './auth.routes';
 import organizationRoutes from './organization.routes';
 import userRoutes from './user.routes';
 import customerRoutes from './customer.routes';
@@ -7,10 +6,12 @@ import productRoutes from './product.routes';
 import featureRoutes from './feature.routes';
 import meterRoutes from './meter.routes';
 import pricingModelRoutes from './pricingModel.routes';
+import rateCardsRoutes from './rateCards.routes';
 import invoiceRoutes from './invoice.routes';
 import paymentRoutes from './payment.routes';
 import usageLimitRoutes from './usageLimit.routes';
 import creditRoutes from './credit.routes';
+import monitoringRoutes from './monitoring.routes';
 
 const router = Router();
 
@@ -28,7 +29,9 @@ router.get('/health', (_req, res) => {
 });
 
 // Mount routes
-router.use('/auth', authRoutes);
+// Note: Authentication is now handled by Keycloak.
+// Old /auth routes (login, register) have been removed.
+// Users must authenticate through Keycloak instead.
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);
 router.use('/customers', customerRoutes);
@@ -36,9 +39,11 @@ router.use('/products', productRoutes);
 router.use('/features', featureRoutes);
 router.use('/meters', meterRoutes);
 router.use('/pricing-models', pricingModelRoutes);
+router.use('/rate-cards', rateCardsRoutes);
 router.use('/invoices', invoiceRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/usage-limits', usageLimitRoutes);
 router.use('/credits', creditRoutes);
+router.use('/monitoring', monitoringRoutes);
 
 export default router;

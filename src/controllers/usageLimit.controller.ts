@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest } from '../middleware/keycloakAuth.middleware';
 import usageLimitService from '../services/usageLimit.service';
 import ApiResponse, { serializeBigInt } from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
@@ -136,6 +136,7 @@ export class UsageLimitController {
       limit_type: req.query.limit_type as string,
       period: req.query.period as string,
       status: req.query.status as string,
+      customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
     };
 
     const result = await usageLimitService.findAll(req.user!.orgId, page, limit, filters);

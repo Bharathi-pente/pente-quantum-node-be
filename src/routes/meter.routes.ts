@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import meterController from '../controllers/meter.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createMeterSchema,
@@ -16,7 +16,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   POST /api/v1/meters
@@ -25,7 +25,7 @@ router.use(authenticate);
  */
 router.post(
   '/',
-  authorize('meters.create'),
+  requireRole('admin'),
   validate(createMeterSchema),
   meterController.create
 );
@@ -51,7 +51,7 @@ router.get('/:id', validate(getMeterSchema), meterController.getById);
  */
 router.put(
   '/:id',
-  authorize('meters.update'),
+  requireRole('admin'),
   validate(updateMeterSchema),
   meterController.update
 );
@@ -63,7 +63,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('meters.delete'),
+  requireRole('admin'),
   validate(getMeterSchema),
   meterController.delete
 );

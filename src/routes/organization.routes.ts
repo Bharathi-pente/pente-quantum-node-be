@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import organizationController from '../controllers/organization.controller';
 import invoiceController from '../controllers/invoice.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createOrganizationSchema,
@@ -24,7 +24,7 @@ router.post(
 );
 
 // All other routes require authentication
-router.use(authenticate);
+router.use(authenticateKeycloak);
 
 /**
  * @route   GET /api/v1/organizations
@@ -47,7 +47,7 @@ router.get('/:id', validate(getOrganizationSchema), organizationController.getBy
  */
 router.put(
   '/:id',
-  authorize('organizations.update'),
+  requireRole('admin'),
   validate(updateOrganizationSchema),
   organizationController.update
 );
@@ -59,7 +59,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authorize('organizations.delete'),
+  requireRole('admin'),
   validate(getOrganizationSchema),
   organizationController.delete
 );
