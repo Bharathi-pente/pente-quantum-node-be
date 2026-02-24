@@ -12,6 +12,7 @@ import paymentRoutes from './payment.routes';
 import usageLimitRoutes from './usageLimit.routes';
 import creditRoutes from './credit.routes';
 import monitoringRoutes from './monitoring.routes';
+import adminRoutes from './admin.routes';
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use('/payments', paymentRoutes);
 router.use('/usage-limits', usageLimitRoutes);
 router.use('/credits', creditRoutes);
 router.use('/monitoring', monitoringRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;
