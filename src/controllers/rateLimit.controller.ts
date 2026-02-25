@@ -200,6 +200,69 @@ export class RateLimitController {
 
   /**
    * @swagger
+   * /rate-limit-policies/metrics:
+   *   get:
+   *     summary: Get rate limit metrics and monitoring data
+   *     tags: [Rate Limits]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: start_date
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Start date for metrics (YYYY-MM-DD)
+   *       - in: query
+   *         name: end_date
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: End date for metrics (YYYY-MM-DD)
+   *       - in: query
+   *         name: product_id
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Filter by product ID
+   *     responses:
+   *       200:
+   *         description: Rate limit metrics retrieved successfully
+   */
+  getMetrics = asyncHandler(async (_req: AuthRequest, res: Response) => {
+    // TODO: Implement real metrics calculation from database/logs using req.query filters
+    // const { start_date, end_date, product_id } = req.query;
+    // const orgId = req.user!.orgId;
+
+    // For now, return mock metrics data
+    const metrics = {
+      totalRequests: 125000,
+      blockedRequests: 1250,
+      averageResponseTime: 245,
+      throughputPerSecond: 1250,
+      topEndpoints: [
+        { endpoint: '/api/customers', requests: 45000, blocked: 450 },
+        { endpoint: '/api/invoices', requests: 35000, blocked: 350 },
+        { endpoint: '/api/payments', requests: 25000, blocked: 250 },
+        { endpoint: '/api/products', requests: 20000, blocked: 200 }
+      ],
+      hourlyData: Array.from({ length: 24 }, (_, i) => ({
+        hour: i,
+        requests: Math.floor(Math.random() * 5000) + 1000,
+        blocked: Math.floor(Math.random() * 100) + 10
+      })),
+      policyPerformance: [
+        { policyName: 'API Rate Limit', requests: 75000, blocked: 750, efficiency: 99.0 },
+        { policyName: 'User Rate Limit', requests: 35000, blocked: 350, efficiency: 99.0 },
+        { policyName: 'Organization Rate Limit', requests: 15000, blocked: 150, efficiency: 99.0 }
+      ]
+    };
+
+    res.json(ApiResponse.success(metrics));
+  });
+
+  /**
+   * @swagger
    * /products/{productId}/rate-limit-policies:
    *   get:
    *     summary: Get all policies for a product

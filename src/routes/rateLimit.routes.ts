@@ -67,6 +67,39 @@ router.get('/', validate(getRateLimitPoliciesQuerySchema), rateLimitController.g
 
 /**
  * @swagger
+ * /rate-limit-policies/metrics:
+ *   get:
+ *     summary: Get rate limit metrics and monitoring data
+ *     tags: [Rate Limits]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for metrics (YYYY-MM-DD)
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for metrics (YYYY-MM-DD)
+ *       - in: query
+ *         name: product_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by product ID
+ *     responses:
+ *       200:
+ *         description: Rate limit metrics retrieved successfully
+ */
+router.get('/metrics', rateLimitController.getMetrics);
+
+/**
+ * @swagger
  * /rate-limit-policies/{id}:
  *   get:
  *     summary: Get rate limit policy by ID
