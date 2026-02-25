@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import organizationController from '../controllers/organization.controller';
+import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
 import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
@@ -74,6 +75,17 @@ router.get(
   validate(getOrganizationSchema),
   validate(getOrganizationInvoicesQuerySchema),
   invoiceController.getByOrganization
+);
+
+/**
+ * @route   GET /api/v1/organizations/:id/customers
+ * @desc    Get all customers for an organization
+ * @access  Private
+ */
+router.get(
+  '/:id/customers',
+  validate(getOrganizationSchema),
+  customerController.getAll
 );
 
 export default router;

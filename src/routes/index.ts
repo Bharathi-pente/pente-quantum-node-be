@@ -13,6 +13,8 @@ import usageLimitRoutes from './usageLimit.routes';
 import creditRoutes from './credit.routes';
 import monitoringRoutes from './monitoring.routes';
 import adminRoutes from './admin.routes';
+import contractRoutes from './contract.routes';
+import rateLimitRoutes from './rateLimit.routes';
 
 const router = Router();
 
@@ -41,10 +43,12 @@ router.use('/features', featureRoutes);
 router.use('/meters', meterRoutes);
 router.use('/pricing-models', pricingModelRoutes);
 router.use('/rate-cards', rateCardsRoutes);
+router.use('/rate-limit-policies', rateLimitRoutes);
 router.use('/invoices', invoiceRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/usage-limits', usageLimitRoutes);
 router.use('/credits', creditRoutes);
+router.use('/contracts', contractRoutes);
 router.use('/monitoring', monitoringRoutes);
 router.use('/admin', adminRoutes);
 

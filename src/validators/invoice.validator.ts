@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createInvoiceSchema = z.object({
   body: z.object({
     invoice_number: z.string().min(1, 'Invoice number is required'),
-    customer_id: z.string().uuid('Invalid customer ID'),
+    customer_id: z.string().min(1, 'Customer ID is required'),
     issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Issue date must be in YYYY-MM-DD format'),
     due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Due date must be in YYYY-MM-DD format'),
     subtotal: z.number().min(0, 'Subtotal must be non-negative'),

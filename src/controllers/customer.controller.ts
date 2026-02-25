@@ -100,7 +100,8 @@ export class CustomerController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.user?.orgId!;
+    // Use orgId from params if provided (for admin accessing other orgs), otherwise use user's orgId
+    const orgId = req.params.id || req.user?.orgId!;
     const filters = {
       status: req.query.status as string,
       product_id: req.query.product_id as string,

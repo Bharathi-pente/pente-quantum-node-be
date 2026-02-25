@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import productController from '../controllers/product.controller';
+import rateLimitController from '../controllers/rateLimit.controller';
 import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
@@ -7,6 +8,7 @@ import {
   updateProductSchema,
   getProductSchema,
 } from '../validators/product.validator';
+import { getByProductSchema } from '../validators/rateLimit.validator';
 
 const router = Router();
 
@@ -75,5 +77,12 @@ router.post('/:id/features/:featureId', requireRole('admin'), productController.
  * @access  Private (admin)
  */
 router.delete('/:id/features/:featureId', requireRole('admin'), productController.removeFeature);
+
+/**
+ * @route   GET /api/v1/products/:productId/rate-limit-policies
+ * @desc    Get all rate limit policies for a product
+ * @access  Private
+ */
+router.get('/:productId/rate-limit-policies', validate(getByProductSchema), rateLimitController.getByProduct);
 
 export default router;
