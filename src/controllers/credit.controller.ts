@@ -29,7 +29,7 @@ export class CreditController {
    *                 format: uuid
    *               credit_type:
    *                 type: string
-   *                 enum: [one_time, recurring, bonus]
+   *                 enum: [prepaid, promotional, commit, compensation]
    *               original_amount:
    *                 type: number
    *                 minimum: 0
@@ -98,7 +98,7 @@ export class CreditController {
    *         name: credit_type
    *         schema:
    *           type: string
-   *           enum: [one_time, recurring, bonus]
+   *           enum: [prepaid, promotional, commit, compensation]
    *       - in: query
    *         name: page
    *         schema:
@@ -179,7 +179,7 @@ export class CreditController {
    *             properties:
    *               credit_type:
    *                 type: string
-   *                 enum: [one_time, recurring, bonus]
+   *                 enum: [prepaid, promotional, commit, compensation]
    *               original_amount:
    *                 type: number
    *                 minimum: 0

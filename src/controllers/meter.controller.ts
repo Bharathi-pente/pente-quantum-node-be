@@ -126,8 +126,81 @@ export class MeterController {
       aggregation: req.query.aggregation as string,
     };
 
-    const result = await meterService.findAll(req.user!.orgId, page, limit, filters);
+    console.log('Meter getAll - User orgId:', req.user!.orgId);
+    console.log('Meter getAll - User roles:', req.user!.roles);
+    console.log('Meter getAll - Filters:', filters);
+
+    // Temporarily allow all meters for debugging
+    const orgId = req.user!.roles?.includes('admin') ? undefined : req.user!.orgId;
+    console.log('Meter getAll - Using orgId:', orgId);
+
+    const result = await meterService.findAll(orgId, page, limit, filters);
+    console.log('Meter getAll - Result:', result);
+    
     res.json(ApiResponse.success(result, 'Meters retrieved successfully'));
+  });
+
+  /**
+   * @swagger
+   * /meters/all:
+   *   get:
+   *     summary: Get all meters (admin only)
+   *     tags: [Meters]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 10
+   *         description: Items per page
+   *       - in: query
+   *         name: search
+   *         schema:
+   *           type: string
+   *         description: Search term
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *         description: Filter by status
+   *       - in: query
+   *         name: event_type
+   *         schema:
+   *           type: string
+   *         description: Filter by event type
+   *       - in: query
+   *         name: aggregation
+   *         schema:
+   *           type: string
+   *         description: Filter by aggregation
+   *     responses:
+   *       200:
+   *         description: List of all meters
+   */
+  getAllAdmin = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const filters = {
+      search: req.query.search as string,
+      status: req.query.status as string,
+      event_type: req.query.event_type as string,
+      aggregation: req.query.aggregation as string,
+    };
+
+    console.log('Meter getAllAdmin - Admin access - showing all meters');
+
+    const result = await meterService.findAll(undefined, page, limit, filters);
+    console.log('Meter getAllAdmin - Result:', result);
+    
+    res.json(ApiResponse.success(result, 'All meters retrieved successfully'));
   });
 
   /**

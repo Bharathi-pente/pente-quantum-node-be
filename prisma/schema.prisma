@@ -596,6 +596,9 @@ model organizations {
   recommendations         recommendations[]
   reports                 reports[]
   roles                   roles[]
+  currency_configs        currency_configs[]
+  tax_configs             tax_configs[]
+  tax_exemptions          tax_exemptions[]
   tax_regions             tax_regions[]
   users                   users[]
   webhooks                webhooks[]
@@ -896,15 +899,20 @@ model roles {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tax_exemptions {
   id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id         String    @db.Uuid
   customer_id    String    @db.Uuid
   reason         String
   certificate_id String?   @db.VarChar(100)
   expires_at     DateTime? @db.Date
+  status         String    @default("active") @db.VarChar(20)
   created_at     DateTime  @default(now()) @db.Timestamp(6)
   customers      customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  organizations  organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([customer_id], map: "idx_tax_exemptions_customer_id")
+  @@index([org_id], map: "idx_tax_exemptions_org_id")
   @@index([expires_at], map: "idx_tax_exemptions_expires_at")
+  @@index([status], map: "idx_tax_exemptions_status")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -918,6 +926,7 @@ model tax_regions {
   name          String        @db.VarChar(255)
   tax_type      String        @db.VarChar(50)
   status        String        @default("active") @db.VarChar(20)
+  created_at    DateTime      @default(now()) @db.Timestamp(6)
   organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([country_code, state_code], map: "idx_tax_regions_country_state")
@@ -927,17 +936,49 @@ model tax_regions {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tax_configs {
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id       String        @db.Uuid
+  enabled      Boolean       @default(false)
+  default_rate Decimal?      @db.Decimal(5, 4)
+  created_at   DateTime      @default(now()) @db.Timestamp(6)
+  updated_at   DateTime      @updatedAt @db.Timestamp(6)
+  organizations organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([org_id])
+  @@index([org_id], map: "idx_tax_configs_org_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model currency_configs {
+  id                   String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  org_id               String        @db.Uuid
+  base_currency        String        @default("USD") @db.VarChar(3)
+  supported_currencies String[]      @default(["USD", "EUR", "GBP"])
+  exchange_rates       Json?         @default("{}")
+  auto_update_rates    Boolean       @default(false)
+  last_updated         DateTime?     @db.Timestamp(6)
+  created_at           DateTime      @default(now()) @db.Timestamp(6)
+  updated_at           DateTime      @updatedAt @db.Timestamp(6)
+  organizations        organizations @relation(fields: [org_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([org_id])
+  @@index([org_id], map: "idx_currency_configs_org_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model usage_limits {
-  id                    String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  product_id            String   @db.Uuid
-  meter_id              String   @db.Uuid
-  limit_type            String   @db.VarChar(20)
-  limit_value           BigInt
-  period                String   @db.VarChar(20)
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id           String   @db.Uuid
+  meter_id             String   @db.Uuid
+  limit_type           String   @db.VarChar(20)
+  limit_value          BigInt
+  period               String   @db.VarChar(20)
   warning_threshold_pct Int?     @default(80)
-  status                String   @default("active") @db.VarChar(20)
-  meters                meters   @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  products              products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  status               String   @default("active") @db.VarChar(20)
+  meters               meters   @relation(fields: [meter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products             products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([product_id, meter_id])
   @@index([meter_id], map: "idx_usage_limits_meter_id")

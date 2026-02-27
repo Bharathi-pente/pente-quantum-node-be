@@ -4,8 +4,8 @@ import { z } from 'zod';
 export const createCreditSchema = z.object({
   body: z.object({
     customer_id: z.string().uuid('Invalid customer ID'),
-    credit_type: z.enum(['one_time', 'recurring', 'bonus'], {
-      errorMap: () => ({ message: 'Credit type must be one_time, recurring, or bonus' })
+    credit_type: z.enum(['prepaid', 'promotional', 'commit', 'compensation'], {
+      errorMap: () => ({ message: 'Credit type must be prepaid, promotional, commit, or compensation' })
     }),
     original_amount: z.number().positive('Original amount must be positive'),
     remaining_amount: z.number().min(0, 'Remaining amount cannot be negative').optional(),
@@ -25,8 +25,8 @@ export const updateCreditSchema = z.object({
     id: z.string().uuid('Invalid credit ID')
   }),
   body: z.object({
-    credit_type: z.enum(['one_time', 'recurring', 'bonus'], {
-      errorMap: () => ({ message: 'Credit type must be one_time, recurring, or bonus' })
+    credit_type: z.enum(['prepaid', 'promotional', 'commit', 'compensation'], {
+      errorMap: () => ({ message: 'Credit type must be prepaid, promotional, commit, or compensation' })
     }).optional(),
     original_amount: z.number().positive('Original amount must be positive').optional(),
     remaining_amount: z.number().min(0, 'Remaining amount cannot be negative').optional(),
@@ -47,8 +47,8 @@ export const getCreditsSchema = z.object({
     status: z.enum(['active', 'expired', 'used'], {
       errorMap: () => ({ message: 'Status must be active, expired, or used' })
     }).optional(),
-    credit_type: z.enum(['one_time', 'recurring', 'bonus'], {
-      errorMap: () => ({ message: 'Credit type must be one_time, recurring, or bonus' })
+    credit_type: z.enum(['prepaid', 'promotional', 'commit', 'compensation'], {
+      errorMap: () => ({ message: 'Credit type must be prepaid, promotional, commit, or compensation' })
     }).optional(),
     page: z.string().regex(/^\d+$/).optional().transform(val => val ? parseInt(val) : 1),
     limit: z.string().regex(/^\d+$/).optional().transform(val => {
@@ -75,8 +75,8 @@ export const deleteCreditSchema = z.object({
 export const createCreditLedgerEntrySchema = z.object({
   body: z.object({
     credit_id: z.string().uuid('Invalid credit ID'),
-    txn_type: z.enum(['credit', 'debit', 'adjustment'], {
-      errorMap: () => ({ message: 'Transaction type must be credit, debit, or adjustment' })
+    txn_type: z.enum(['usage', 'grant', 'adjustment', 'expiry'], {
+      errorMap: () => ({ message: 'Transaction type must be usage, grant, adjustment, or expiry' })
     }),
     amount: z.number().refine(val => val !== 0, 'Amount cannot be zero'),
     description: z.string().optional()

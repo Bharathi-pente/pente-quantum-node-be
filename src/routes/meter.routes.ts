@@ -38,6 +38,13 @@ router.post(
 router.get('/', meterController.getAll);
 
 /**
+ * @route   GET /api/v1/meters/all
+ * @desc    Get all meters (admin only - for debugging)
+ * @access  Private (admin)
+ */
+router.get('/all', requireRole('admin'), meterController.getAllAdmin);
+
+/**
  * @route   GET /api/v1/meters/:id
  * @desc    Get meter by ID
  * @access  Private

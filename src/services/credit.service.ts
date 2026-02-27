@@ -59,7 +59,7 @@ export class CreditService {
           customer_id: data.customer_id,
           credit_id: credit.id,
           entry_date: new Date(),
-          txn_type: 'credit',
+          txn_type: 'grant',
           amount: data.original_amount,
           running_balance: remainingAmount,
           description: `Initial credit: ${data.reason || 'Credit added'}`
@@ -318,7 +318,7 @@ export class CreditService {
             customer_id: credit.customer_id,
             credit_id: creditId,
             entry_date: new Date(),
-            txn_type: 'debit',
+            txn_type: 'usage',
             amount: -amount,
             running_balance: newRemainingAmount,
             description
