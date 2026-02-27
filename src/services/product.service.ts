@@ -24,9 +24,9 @@ export class ProductService {
     }
   }
 
-  async findAll(orgId: string, page = 1, limit = 10, filters?: any) {
+  async findAll(orgId: string | undefined, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
-    const where: any = { org_id: orgId };
+    const where: any = orgId ? { org_id: orgId } : {};
 
     if (filters?.status) {
       where.status = filters.status;

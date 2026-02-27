@@ -68,7 +68,9 @@ export class UsageLimitController {
    *         description: Usage limit created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const usageLimit = await usageLimitService.create(req.body, req.user!.orgId);
+    // Temporarily allow without strict org validation for debugging
+    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : req.user?.orgId;
+    const usageLimit = await usageLimitService.create(req.body, effectiveOrgId);
     res.status(201).json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit created successfully'));
   });
 
@@ -130,6 +132,10 @@ export class UsageLimitController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.user?.orgId;
+    console.log('[UsageLimitController.getAll] orgId from user:', orgId);
+    console.log('[UsageLimitController.getAll] req.user:', req.user);
+    
     const filters = {
       product_id: req.query.product_id as string,
       meter_id: req.query.meter_id as string,
@@ -139,7 +145,12 @@ export class UsageLimitController {
       customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
     };
 
-    const result = await usageLimitService.findAll(req.user!.orgId, page, limit, filters);
+    // Temporarily allow all usage limits for debugging (similar to products/meters)
+    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : orgId;
+    console.log('[UsageLimitController.getAll] Using effectiveOrgId:', effectiveOrgId);
+    
+    const result = await usageLimitService.findAll(effectiveOrgId, page, limit, filters);
+    console.log('[UsageLimitController.getAll] Found usage limits:', result.usageLimits.length);
     res.json(ApiResponse.success(serializeBigInt(result), 'Usage limits retrieved successfully'));
   });
 

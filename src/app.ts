@@ -14,6 +14,7 @@ import logger from './config/logger';
 import { swaggerSpec } from './config/swagger';
 import { initializeSentry } from './config/sentry';
 import { setupExpressErrorHandler } from '@sentry/node';
+import { registerServices } from './config/serviceRegistration';
 
 // Import routes
 import routes from './routes';
@@ -22,9 +23,14 @@ import routes from './routes';
 import { errorHandler, notFound } from './middleware/error.middleware';
 import { apiLimiter } from './middleware/rateLimiter.middleware';
 import { performanceMonitor } from './middleware/performance.middleware';
+import { diMiddleware } from './middleware/di.middleware';
+import { dataLoaderMiddleware } from './middleware/dataLoader.middleware';
 
 // Initialize Sentry
 initializeSentry();
+
+// Register services with DI container
+registerServices();
 
 // Create Express app
 const app: Application = express();
@@ -44,16 +50,46 @@ if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
 app.use(performanceMonitor);
 
 // ═══════════════════════════════════════════
+// DEPENDENCY INJECTION
+// ═══════════════════════════════════════════
+
+app.use(diMiddleware);
+
+// ═══════════════════════════════════════════
+// DATALOADER (N+1 Query Prevention)
+// ═══════════════════════════════════════════
+
+app.use(dataLoaderMiddleware);
+
+// ═══════════════════════════════════════════
 // MIDDLEWARE
 // ═══════════════════════════════════════════
 
 // Security middleware
 app.use(helmet());
 
-// CORS
+// CORS - Secure origin configuration
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173', 'http://localhost:3000']; // Default for development only
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id', 'x-customer-id'],
+  exposedHeaders: ['X-Total-Count', 'X-Page', 'X-Per-Page'],
+  maxAge: 86400, // 24 hours
 }));
 
 // Body parser

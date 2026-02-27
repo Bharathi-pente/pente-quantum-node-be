@@ -9,7 +9,7 @@ import pricingModelRoutes from './pricingModel.routes';
 import rateCardsRoutes from './rateCards.routes';
 import invoiceRoutes from './invoice.routes';
 import paymentRoutes from './payment.routes';
-// import usageLimitRoutes from './usageLimit.routes';
+import usageLimitRoutes from './usageLimit.routes';
 import creditRoutes from './credit.routes';
 import monitoringRoutes from './monitoring.routes';
 import adminRoutes from './admin.routes';
@@ -17,6 +17,9 @@ import contractRoutes from './contract.routes';
 import rateLimitRoutes from './rateLimit.routes';
 import taxRoutes from './tax.routes';
 import currencyRoutes from './currency.routes';
+import webhookRoutes from './webhook.routes';
+import paymentMethodRoutes from './paymentMethod.routes';
+import usageRoutes from './usage.routes';
 
 const router = Router();
 
@@ -48,12 +51,15 @@ router.use('/rate-cards', rateCardsRoutes);
 router.use('/rate-limit-policies', rateLimitRoutes);
 router.use('/invoices', invoiceRoutes);
 router.use('/payments', paymentRoutes);
-// router.use('/usage-limits', usageLimitRoutes);
+router.use('/payment-methods', paymentMethodRoutes);
+router.use('/usage-limits', usageLimitRoutes);
 router.use('/credits', creditRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/monitoring', monitoringRoutes);
 router.use('/admin', adminRoutes);
 router.use('/tax', taxRoutes);
 router.use('/currency', currencyRoutes);
+router.use('/webhooks', webhookRoutes);
+router.use('/usage-events', usageRoutes);
 
 export default router;

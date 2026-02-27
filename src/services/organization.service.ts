@@ -102,6 +102,124 @@ export class OrganizationService {
     await this.findById(id);
     return await prisma.organizations.delete({ where: { id } });
   }
+
+  async getDashboard(orgId: string) {
+    // Get organization metrics in parallel
+    const [
+      totalMRR,
+      activeCustomersCount,
+      totalCredits,
+      pendingInvoicesCount,
+      recentCustomers,
+      recentInvoices,
+      recentPayments,
+      activeRateCards,
+      customerHealthCounts,
+    ] = await Promise.all([
+      // Total MRR from active customers
+      prisma.customers.aggregate({
+        where: { org_id: orgId, status: 'active' },
+        _sum: { mrr: true },
+      }),
+      // Count of active customers
+      prisma.customers.count({
+        where: { org_id: orgId, status: 'active' },
+      }),
+      // Total credits remaining
+      prisma.credits.aggregate({
+        where: { customers: { org_id: orgId }, status: 'active' },
+        _sum: { remaining_amount: true },
+      }),
+      // Count of pending invoices
+      prisma.invoices.count({
+        where: {
+          customers: { org_id: orgId },
+          status: 'pending'
+        },
+      }),
+      // Recent customers
+      prisma.customers.findMany({
+        where: { org_id: orgId },
+        orderBy: { created_at: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          status: true,
+          mrr: true,
+          health_score: true,
+          created_at: true,
+        },
+      }),
+      // Recent invoices
+      prisma.invoices.findMany({
+        where: { customers: { org_id: orgId } },
+        orderBy: { created_at: 'desc' },
+        take: 5,
+        include: {
+          customers: {
+            select: { name: true },
+          },
+        },
+      }),
+      // Recent payments
+      prisma.payments.findMany({
+        where: { customers: { org_id: orgId } },
+        orderBy: { created_at: 'desc' },
+        take: 5,
+        include: {
+          customers: {
+            select: { name: true },
+          },
+        },
+      }),
+      // Active rate cards
+      prisma.rate_cards.findMany({
+        where: { org_id: orgId, status: 'active' },
+        orderBy: { created_at: 'desc' },
+        take: 3,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          created_at: true,
+        },
+      }),
+      // Customer health counts
+      prisma.customers.groupBy({
+        by: ['health_score'],
+        where: { org_id: orgId },
+        _count: { health_score: true },
+      }),
+    ]);
+
+    // Process customer health counts
+    const healthCounts = {
+      healthy: 0,
+      atRisk: 0,
+      critical: 0,
+    };
+
+    customerHealthCounts.forEach((group) => {
+      const score = group.health_score || 0;
+      if (score > 70) healthCounts.healthy += group._count.health_score;
+      else if (score >= 40) healthCounts.atRisk += group._count.health_score;
+      else healthCounts.critical += group._count.health_score;
+    });
+
+    return {
+      totalMRR: totalMRR._sum.mrr || 0,
+      activeCustomers: activeCustomersCount,
+      totalCredits: totalCredits._sum.remaining_amount || 0,
+      pendingInvoices: pendingInvoicesCount,
+      recentCustomers,
+      recentInvoices,
+      recentPayments,
+      activeRateCards,
+      customerHealth: healthCounts,
+    };
+  }
 }
 
 export default new OrganizationService();

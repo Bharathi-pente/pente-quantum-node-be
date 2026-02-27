@@ -1,4 +1,5 @@
 import winston from 'winston';
+import { sanitizeFormat } from '../utils/logSanitizer';
 
 const levels = {
   error: 0,
@@ -26,6 +27,7 @@ winston.addColors(colors);
 
 const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
+  winston.format(sanitizeFormat.transform)(), // Add log sanitization
   winston.format.colorize({ all: true }),
   winston.format.printf(
     (info) => `${info.timestamp} ${info.level}: ${info.message}`,

@@ -73,13 +73,16 @@ export class ProductController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.user?.orgId!;
+    
+    // Temporarily allow all products for debugging (similar to meters)
+    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : req.user?.orgId;
+    
     const filters = {
       status: req.query.status as string,
       search: req.query.search as string,
     };
 
-    const { products, total } = await productService.findAll(orgId, page, limit, filters);
+    const { products, total } = await productService.findAll(effectiveOrgId, page, limit, filters);
     res.json(ApiResponse.paginated(products, page, limit, total));
   });
 

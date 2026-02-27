@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import ApiError from '../utils/ApiError';
 import logger from '../config/logger';
+import { sanitizeLog } from '../utils/logSanitizer';
 
 export const errorHandler = (
   err: Error | ApiError,
@@ -18,12 +19,14 @@ export const errorHandler = (
     isOperational = err.isOperational;
   }
 
-  // Log error
-  logger.error(`[${req.method}] ${req.path} >> StatusCode: ${statusCode}, Message: ${message}`);
+  // Log error with sanitization
+  logger.error(
+    sanitizeLog(`[${req.method}] ${req.path} >> StatusCode: ${statusCode}, Message: ${message}`)
+  );
   
-  // Log stack trace for debugging
+  // Log stack trace for debugging (sanitized)
   if (process.env.NODE_ENV === 'development') {
-    logger.error('Error stack:', err.stack);
+    logger.error(sanitizeLog('Error stack:' + (err.stack || '')));
   }
 
   // Send response

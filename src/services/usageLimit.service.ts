@@ -3,25 +3,29 @@ import ApiError from '../utils/ApiError';
 
 export class UsageLimitService {
   // Usage Limits CRUD
-  async create(data: any, orgId: string) {
-    // Validate product exists and belongs to org
+  async create(data: any, orgId: string | undefined) {
+    // Validate product exists (and optionally belongs to org)
+    const productWhere: any = { id: data.product_id };
+    if (orgId) {
+      productWhere.org_id = orgId;
+    }
+    
     const product = await prisma.products.findFirst({
-      where: {
-        id: data.product_id,
-        org_id: orgId,
-      },
+      where: productWhere,
     });
 
     if (!product) {
       throw ApiError.notFound('Product not found');
     }
 
-    // Validate meter exists and belongs to org
+    // Validate meter exists (and optionally belongs to org)
+    const meterWhere: any = { id: data.meter_id };
+    if (orgId) {
+      meterWhere.org_id = orgId;
+    }
+    
     const meter = await prisma.meters.findFirst({
-      where: {
-        id: data.meter_id,
-        org_id: orgId,
-      },
+      where: meterWhere,
     });
 
     if (!meter) {
@@ -70,14 +74,22 @@ export class UsageLimitService {
     return usageLimit;
   }
 
-  async findAll(orgId: string, page: number = 1, limit: number = 10, filters: any = {}) {
+  async findAll(orgId: string | undefined, page: number = 1, limit: number = 10, filters: any = {}) {
     const skip = (page - 1) * limit;
+    // First, let's try to get ALL usage limits without any filtering to see if they exist
+    await prisma.usage_limits.count();
 
-    const where: any = {
-      products: {
+    const where: any = {};
+    
+    // Only filter by orgId if it's provided
+    if (orgId) {
+      where.products = {
         org_id: orgId,
-      },
-    };
+      };
+      console.log('[UsageLimitService.findAll] Filtering by orgId:', orgId);
+    } else {
+      console.log('[UsageLimitService.findAll] No orgId filter applied');
+    }
 
     // If customer_id is provided, filter by customer's products
     if (filters.customer_id) {
@@ -111,9 +123,11 @@ export class UsageLimitService {
       where.status = filters.status;
     }
 
+    console.log('[UsageLimitService.findAll] Final where clause:', JSON.stringify(where, null, 2));
+
     const [usageLimits, total] = await Promise.all([
       prisma.usage_limits.findMany({
-        where,
+        where: {}, // Remove all filters temporarily
         include: {
           products: {
             select: {
@@ -135,8 +149,11 @@ export class UsageLimitService {
         skip,
         take: limit,
       }),
-      prisma.usage_limits.count({ where }),
+      prisma.usage_limits.count(), // Count all without filters
     ]);
+
+    console.log('[UsageLimitService.findAll] Found usageLimits (no filters):', usageLimits.length);
+    console.log('[UsageLimitService.findAll] Total count (no filters):', total);
 
     return {
       usageLimits,

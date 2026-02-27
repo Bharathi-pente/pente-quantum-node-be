@@ -1,5 +1,10 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import {
+  CursorPaginationOptions,
+  buildCursorWhere,
+  buildPaginatedResponse,
+} from '../utils/pagination';
 
 export class CustomerService {
   async create(data: any) {
@@ -86,6 +91,62 @@ export class CustomerService {
     ]);
 
     return { customers, total, page, limit };
+  }
+
+  /**
+   * Cursor-based pagination for better performance with large datasets
+   * Recommended for production use with 100k+ records
+   */
+  async findAllCursor(
+    orgId: string, 
+    options: CursorPaginationOptions & { filters?: any }
+  ) {
+    const { 
+      limit = 20, 
+      cursor, 
+      sortField = 'created_at', 
+      sortOrder = 'desc',
+      filters 
+    } = options;
+
+    // Build base where clause
+    let baseWhere: any = { org_id: orgId };
+
+    if (filters?.status) {
+      baseWhere.status = filters.status;
+    }
+    if (filters?.product_id) {
+      baseWhere.product_id = filters.product_id;
+    }
+    if (filters?.search) {
+      baseWhere.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Build cursor-based where clause
+    const where = buildCursorWhere(cursor, sortField, sortOrder, baseWhere);
+
+    // Fetch limit + 1 to determine if there's a next page
+    const customers = await prisma.customers.findMany({
+      where,
+      take: limit + 1,
+      orderBy: [
+        { [sortField]: sortOrder },
+        { id: sortOrder }, // Secondary sort for consistency
+      ],
+      include: {
+        products: {
+          select: {
+            name: true,
+            base_price: true,
+          },
+        },
+      },
+    });
+
+    return buildPaginatedResponse(customers, limit, sortField, cursor);
   }
 
   async findById(id: string) {

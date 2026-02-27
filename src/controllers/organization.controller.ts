@@ -115,6 +115,27 @@ export class OrganizationController {
 
   /**
    * @swagger
+   * /organizations/{id}/dashboard:
+   *   get:
+   *     summary: Get organization dashboard data
+   *     tags: [Organizations]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Dashboard data retrieved successfully
+   */
+  getDashboard = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const dashboard = await organizationService.getDashboard(req.params.id);
+    res.json(ApiResponse.success(dashboard));
+  });
+
+  /**
+   * @swagger
    * /organizations/{id}:
    *   delete:
    *     summary: Delete organization

@@ -54,6 +54,17 @@ router.put(
 );
 
 /**
+ * @route   GET /api/v1/organizations/:id/dashboard
+ * @desc    Get organization dashboard data
+ * @access  Private
+ */
+router.get(
+  '/:id/dashboard',
+  validate(getOrganizationSchema),
+  organizationController.getDashboard
+);
+
+/**
  * @route   DELETE /api/v1/organizations/:id
  * @desc    Delete organization
  * @access  Private (admin)
