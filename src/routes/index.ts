@@ -4,6 +4,7 @@ import userRoutes from './user.routes';
 import customerRoutes from './customer.routes';
 import productRoutes from './product.routes';
 import featureRoutes from './feature.routes';
+import entitlementRoutes from './entitlement.routes';
 import meterRoutes from './meter.routes';
 import pricingModelRoutes from './pricingModel.routes';
 import rateCardsRoutes from './rateCards.routes';
@@ -22,6 +23,7 @@ import paymentMethodRoutes from './paymentMethod.routes';
 import usageRoutes from './usage.routes';
 import orgPaymentRoutes from './orgPayment.routes';
 import orgPaymentMethodRoutes from './orgPaymentMethod.routes';
+import dunningRoutes from './dunning.routes';
 
 const router = Router();
 
@@ -47,6 +49,7 @@ router.use('/users', userRoutes);
 router.use('/customers', customerRoutes);
 router.use('/products', productRoutes);
 router.use('/features', featureRoutes);
+router.use('/entitlements', entitlementRoutes);
 router.use('/meters', meterRoutes);
 router.use('/pricing-models', pricingModelRoutes);
 router.use('/rate-cards', rateCardsRoutes);
@@ -65,5 +68,6 @@ router.use('/tax', taxRoutes);
 router.use('/currency', currencyRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/usage-events', usageRoutes);
+router.use('/dunning', dunningRoutes);
 
 export default router;

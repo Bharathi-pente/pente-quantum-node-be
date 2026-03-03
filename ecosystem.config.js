@@ -82,7 +82,35 @@ module.exports = {
         NODE_ENV: 'production',
       },
     },
-  ],
+    {
+      name: 'quantumbilling-temporal-worker',
+      script: './dist/workers/dunning.worker.js',
+      instances: 1, // Single worker for Temporal (Temporal handles concurrency)
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+      },
+      
+      // Resource management
+      max_memory_restart: '1G',
+      min_uptime: '10s',
+      max_restarts: 10,
+      autorestart: true,
+      
+      // Logging
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      error_file: './logs/temporal-worker-error.log',
+      out_file: './logs/temporal-worker-out.log',
+      merge_logs: true,
+      
+      // Graceful shutdown
+      kill_timeout: 30000, // Temporal workers need time to finish workflows
+      wait_ready: false,
+      
+      env_production: {
+        NODE_ENV: 'production',
+      },
+    },
 
   // Deployment configuration (optional)
   deploy: {

@@ -18,7 +18,8 @@ FROM node:20-alpine AS development
 # Install development tools
 RUN apk add --no-cache \
     dumb-init \
-    git
+    git \
+    openssl
 
 WORKDIR /app
 
