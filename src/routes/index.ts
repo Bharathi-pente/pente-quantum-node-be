@@ -20,6 +20,8 @@ import currencyRoutes from './currency.routes';
 import webhookRoutes from './webhook.routes';
 import paymentMethodRoutes from './paymentMethod.routes';
 import usageRoutes from './usage.routes';
+import orgPaymentRoutes from './orgPayment.routes';
+import orgPaymentMethodRoutes from './orgPaymentMethod.routes';
 
 const router = Router();
 
@@ -52,6 +54,8 @@ router.use('/rate-limit-policies', rateLimitRoutes);
 router.use('/invoices', invoiceRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/payment-methods', paymentMethodRoutes);
+router.use('/org-payments', orgPaymentRoutes);
+router.use('/org-payment-methods', orgPaymentMethodRoutes);
 router.use('/usage-limits', usageLimitRoutes);
 router.use('/credits', creditRoutes);
 router.use('/contracts', contractRoutes);

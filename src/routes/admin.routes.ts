@@ -18,6 +18,7 @@ router.get('/metrics', adminController.getPlatformMetrics);
 router.get('/meters', adminController.getMeters);
 router.get('/pricing-models', adminController.getPricingModels);
 router.post('/pricing-models', adminController.createPricingModel);
+router.put('/pricing-models/:id', adminController.updatePricingModel);
 router.get('/mrr-history', adminController.getMrrHistory);
 router.get('/revenue-by-plan', adminController.getRevenueByPlan);
 router.get('/matrix-pricing', adminController.getMatrixPricing);

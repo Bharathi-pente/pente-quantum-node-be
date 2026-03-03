@@ -286,6 +286,147 @@ export class AdminController {
 
   /**
    * @swagger
+   * /admin/pricing-models/{id}:
+   *   put:
+   *     summary: Update a pricing model (Admin)
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Pricing model ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 description: Pricing model name
+   *               pricing_type:
+   *                 type: string
+   *                 enum: [per_unit, tiered, volume, package]
+   *                 description: Type of pricing
+   *               meter_id:
+   *                 type: string
+   *                 description: Associated meter ID (optional)
+   *               unit_price:
+   *                 type: number
+   *                 description: Unit price for flat pricing
+   *               unit_label:
+   *                 type: string
+   *                 description: Unit label (e.g., "per token")
+   *               status:
+   *                 type: string
+   *                 enum: [active, draft, archived]
+   *                 description: Status of the pricing model
+   *     responses:
+   *       200:
+   *         description: Pricing model updated successfully
+   */
+  updatePricingModel = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { org_id, ...updateData } = req.body;
+
+    // Check if pricing model exists
+    const existingModel = await prisma.pricing_models.findUnique({
+      where: { id },
+    });
+
+    if (!existingModel) {
+      throw ApiError.notFound('Pricing model not found');
+    }
+
+    // If name is being updated, check for conflicts
+    if (updateData.name && updateData.name !== existingModel.name) {
+      const nameConflict = await prisma.pricing_models.findFirst({
+        where: {
+          name: updateData.name,
+          org_id: existingModel.org_id,
+          id: { not: id },
+        },
+      });
+
+      if (nameConflict) {
+        throw ApiError.conflict('Pricing model with this name already exists in the organization');
+      }
+    }
+
+    // Validate meter if provided and not null/undefined
+    if (updateData.meter_id !== undefined && updateData.meter_id !== null) {
+      const meter = await prisma.meters.findUnique({
+        where: { id: updateData.meter_id },
+      });
+
+      if (!meter) {
+        throw ApiError.badRequest('Invalid meter ID');
+      }
+    }
+
+    const updatePayload: any = {};
+
+    if (updateData.name !== undefined) updatePayload.name = updateData.name;
+    if (updateData.pricing_type !== undefined) updatePayload.pricing_type = updateData.pricing_type;
+    if (updateData.meter_id !== undefined) updatePayload.meter_id = updateData.meter_id;
+    if (updateData.unit_price !== undefined) updatePayload.unit_price = updateData.unit_price;
+    if (updateData.unit_label !== undefined) updatePayload.unit_label = updateData.unit_label;
+    if (updateData.status !== undefined) updatePayload.status = updateData.status;
+
+    const pricingModel = await prisma.pricing_models.update({
+      where: { id },
+      data: updatePayload,
+      include: {
+        organizations: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        meters: {
+          select: {
+            id: true,
+            name: true,
+            event_type: true
+          }
+        },
+        pricing_tiers: {
+          orderBy: {
+            sort_order: 'asc',
+          },
+          select: {
+            id: true,
+            from_qty: true,
+            to_qty: true,
+            price_per_unit: true,
+            sort_order: true
+          }
+        },
+      },
+    });
+
+    // Return comprehensive response with real-time data
+    const responseData = {
+      ...pricingModel,
+      created_at: pricingModel.created_at.toISOString(),
+      // Add any computed fields for immediate display
+      display_name: `${pricingModel.name} (${pricingModel.organizations?.name || 'Unknown Org'})`,
+      meter_info: pricingModel.meters ? `${pricingModel.meters.name} (${pricingModel.meters.event_type})` : 'No meter',
+      pricing_summary: pricingModel.pricing_type === 'per_unit' && pricingModel.unit_price
+        ? `${pricingModel.unit_price} per ${pricingModel.unit_label || 'unit'}`
+        : `${pricingModel.pricing_tiers?.length || 0} tiers`
+    };
+
+    res.json(ApiResponse.success(responseData, 'Pricing model updated successfully'));
+  });
+
+  /**
+   * @swagger
    * /admin/mrr-history:
    *   get:
    *     summary: Get MRR history

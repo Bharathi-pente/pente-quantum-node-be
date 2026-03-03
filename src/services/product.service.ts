@@ -10,6 +10,18 @@ export class ProductService {
           status: data.status || 'active',
           base_price: data.base_price || 0,
         },
+        include: {
+          product_features: {
+            include: {
+              features: true,
+            },
+          },
+          _count: {
+            select: {
+              customers: true,
+            },
+          },
+        },
       });
     } catch (error: any) {
       if (error.code === 'P2003') {
@@ -71,33 +83,6 @@ export class ProductService {
   async findById(id: string) {
     const product = await prisma.products.findUnique({
       where: { id },
-      include: {
-        product_features: {
-          include: {
-            features: true,
-          },
-        },
-        usage_limits: true,
-        rate_limit_policies: {
-          include: {
-            rate_limit_rules: true,
-          },
-        },
-        customers: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            status: true,
-          },
-          take: 10,
-        },
-        _count: {
-          select: {
-            customers: true,
-          },
-        },
-      },
     });
 
     if (!product) {
@@ -108,22 +93,54 @@ export class ProductService {
   }
 
   async update(id: string, data: any) {
-    await this.findById(id);
 
-    return await prisma.products.update({
-      where: { id },
-      data: {
-        ...data,
-        updated_at: new Date(),
-      },
-      include: {
-        product_features: {
-          include: {
-            features: true,
+    // Filter to only include valid fields for products table
+    const allowedFields = ['name', 'description', 'base_price', 'status'];
+    const filteredData: any = {};
+    
+    allowedFields.forEach(field => {
+      if (data[field] !== undefined) {
+        if (field === 'name' && data[field]) {
+          filteredData[field] = data[field].trim();
+        } else if (field === 'base_price') {
+          filteredData[field] = Number(data[field]);
+        } else {
+          filteredData[field] = data[field];
+        }
+      }
+    });
+
+    console.log('Filtered data:', JSON.stringify(filteredData, null, 2));
+
+    if (Object.keys(filteredData).length === 0) {
+      throw ApiError.badRequest('No valid fields provided for update');
+    }
+
+    try {
+      return await prisma.products.update({
+        where: { id },
+        data: filteredData,
+        include: {
+          product_features: {
+            include: {
+              features: true,
+            },
+          },
+          _count: {
+            select: {
+              customers: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error: any) {
+      console.error('Prisma update error:', error);
+      if (error.code === 'P2002') {
+        // Unique constraint violation
+        throw ApiError.conflict('Product with this name already exists in your organization');
+      }
+      throw error;
+    }
   }
 
   async delete(id: string) {

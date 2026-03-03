@@ -2,6 +2,7 @@ import { Router } from 'express';
 import organizationController from '../controllers/organization.controller';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
+import { AlertsController } from '../controllers/alerts.controller';
 import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
@@ -10,8 +11,15 @@ import {
   getOrganizationSchema,
 } from '../validators/organization.validator';
 import { getOrganizationInvoicesQuerySchema } from '../validators/invoice.validator';
+import {
+  createAlertSchema,
+  updateAlertSchema,
+  getAlertSchema,
+  getAlertsByOrgSchema,
+} from '../validators/alerts.validator';
 
 const router = Router();
+const alertsController = new AlertsController();
 
 /**
  * @route   POST /api/v1/organizations
@@ -97,6 +105,84 @@ router.get(
   '/:id/customers',
   validate(getOrganizationSchema),
   customerController.getAll
+);
+
+/**
+ * @route   POST /api/v1/organizations/:orgId/alerts
+ * @desc    Create alert
+ * @access  Private
+ */
+router.post(
+  '/:orgId/alerts',
+  validate(getAlertsByOrgSchema),
+  validate(createAlertSchema),
+  alertsController.create
+);
+
+/**
+ * @route   GET /api/v1/organizations/:orgId/alerts
+ * @desc    Get all alerts for an organization
+ * @access  Private
+ */
+router.get(
+  '/:orgId/alerts',
+  validate(getAlertsByOrgSchema),
+  alertsController.getByOrgId
+);
+
+/**
+ * @route   GET /api/v1/organizations/:orgId/alerts/:id
+ * @desc    Get alert by ID
+ * @access  Private
+ */
+router.get(
+  '/:orgId/alerts/:id',
+  validate(getAlertSchema),
+  alertsController.getById
+);
+
+/**
+ * @route   PUT /api/v1/organizations/:orgId/alerts/:id
+ * @desc    Update alert
+ * @access  Private
+ */
+router.put(
+  '/:orgId/alerts/:id',
+  validate(getAlertSchema),
+  validate(updateAlertSchema),
+  alertsController.update
+);
+
+/**
+ * @route   DELETE /api/v1/organizations/:orgId/alerts/:id
+ * @desc    Delete alert
+ * @access  Private
+ */
+router.delete(
+  '/:orgId/alerts/:id',
+  validate(getAlertSchema),
+  alertsController.delete
+);
+
+/**
+ * @route   GET /api/v1/organizations/:orgId/alerts/:id/history
+ * @desc    Get alert history
+ * @access  Private
+ */
+router.get(
+  '/:orgId/alerts/:id/history',
+  validate(getAlertSchema),
+  alertsController.getHistory
+);
+
+/**
+ * @route   GET /api/v1/organizations/:orgId/alerts/history
+ * @desc    Get organization alert history
+ * @access  Private
+ */
+router.get(
+  '/:orgId/alerts/history',
+  alertsController.getOrganizationHistory
 );
 
 export default router;
