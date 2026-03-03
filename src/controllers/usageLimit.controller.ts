@@ -228,7 +228,14 @@ export class UsageLimitController {
    *         description: Usage limit updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const usageLimit = await usageLimitService.update(req.params.id, req.body, req.user!.orgId);
+    const effectiveOrgId = req.user!.roles?.includes('admin')
+      ? undefined
+      : req.user?.orgId;
+    const usageLimit = await usageLimitService.update(
+      req.params.id,
+      req.body,
+      effectiveOrgId,
+    );
     res.json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit updated successfully'));
   });
 

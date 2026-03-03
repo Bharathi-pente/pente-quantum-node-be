@@ -127,7 +127,7 @@ export class UsageLimitService {
 
     const [usageLimits, total] = await Promise.all([
       prisma.usage_limits.findMany({
-        where: {}, // Remove all filters temporarily
+        where,
         include: {
           products: {
             select: {
@@ -149,11 +149,11 @@ export class UsageLimitService {
         skip,
         take: limit,
       }),
-      prisma.usage_limits.count(), // Count all without filters
+      prisma.usage_limits.count({ where }),
     ]);
 
-    console.log('[UsageLimitService.findAll] Found usageLimits (no filters):', usageLimits.length);
-    console.log('[UsageLimitService.findAll] Total count (no filters):', total);
+    console.log('[UsageLimitService.findAll] Found usageLimits:', usageLimits.length);
+    console.log('[UsageLimitService.findAll] Total count:', total);
 
     return {
       usageLimits,
@@ -198,15 +198,15 @@ export class UsageLimitService {
     return usageLimit;
   }
 
-  async update(id: string, data: any, orgId: string) {
+  async update(id: string, data: any, orgId: string | undefined) {
     // Check if usage limit exists and belongs to org
+    const where: any = { id };
+    if (orgId) {
+      where.products = { org_id: orgId };
+    }
+
     const existingLimit = await prisma.usage_limits.findFirst({
-      where: {
-        id,
-        products: {
-          org_id: orgId,
-        },
-      },
+      where,
     });
 
     if (!existingLimit) {

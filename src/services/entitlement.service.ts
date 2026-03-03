@@ -59,11 +59,11 @@ export class EntitlementService {
     }
   }
 
-  async findAllGrants(orgId: string, page = 1, limit = 10, filters?: any) {
+  async findAllGrants(_orgId: string, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
     const where: any = {
       customers: {
-        org_id: orgId,
+        org_id: _orgId,
       },
     };
 
