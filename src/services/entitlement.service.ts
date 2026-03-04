@@ -9,6 +9,20 @@ export class EntitlementService {
         id: data.customer_id,
         org_id: orgId,
       },
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
 
     if (!customer) {
@@ -153,6 +167,20 @@ export class EntitlementService {
           id: data.customer_id,
           org_id: orgId,
         },
+        select: {
+          id: true,
+          org_id: true,
+          name: true,
+          email: true,
+          product_id: true,
+          status: true,
+          mrr: true,
+          credit_balance: true,
+          health_score: true,
+          logo_initials: true,
+          created_at: true,
+          updated_at: true,
+        },
       });
       if (!customer) {
         throw ApiError.notFound('Customer not found in your organization');
@@ -221,6 +249,20 @@ export class EntitlementService {
       where: {
         id: customerId,
         org_id: orgId,
+      },
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 

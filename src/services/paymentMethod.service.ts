@@ -6,6 +6,20 @@ export class PaymentMethodService {
     // Validate customer exists
     const customer = await prisma.customers.findUnique({
       where: { id: customerId },
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
 
     if (!customer) {

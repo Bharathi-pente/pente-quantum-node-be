@@ -10,6 +10,10 @@ export const createCustomerSchema = z.object({
     mrr: z.number().min(0).optional(),
     credit_balance: z.number().optional(),
     health_score: z.number().min(0).max(100).optional(),
+    primary_contact: z.string().optional(),
+    phone: z.string().optional(),
+    billing_currency: z.enum(['USD', 'EUR', 'GBP']).optional(),
+    billing_cycle: z.enum(['monthly', 'quarterly', 'annual']).optional(),
   }),
 });
 
@@ -25,6 +29,10 @@ export const updateCustomerSchema = z.object({
     mrr: z.number().min(0).optional(),
     credit_balance: z.number().optional(),
     health_score: z.number().min(0).max(100).optional(),
+    primary_contact: z.string().optional(),
+    phone: z.string().optional(),
+    billing_currency: z.enum(['USD', 'EUR', 'GBP']).optional(),
+    billing_cycle: z.enum(['monthly', 'quarterly', 'annual']).optional(),
   }),
 });
 

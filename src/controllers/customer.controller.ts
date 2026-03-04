@@ -59,6 +59,20 @@ export class CustomerController {
    *                 minimum: 0
    *                 maximum: 100
    *                 description: Health score (optional)
+   *               primary_contact:
+   *                 type: string
+   *                 description: Primary contact name (optional)
+   *               phone:
+   *                 type: string
+   *                 description: Phone number (optional)
+   *               billing_currency:
+   *                 type: string
+   *                 enum: [USD, EUR, GBP]
+   *                 description: Billing currency (optional, default USD)
+   *               billing_cycle:
+   *                 type: string
+   *                 enum: [monthly, quarterly, annual]
+   *                 description: Billing cycle (optional, default monthly)
    *     responses:
    *       201:
    *         description: Customer created successfully

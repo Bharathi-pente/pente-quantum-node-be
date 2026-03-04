@@ -9,6 +9,20 @@ export class ContractService {
         id: data.customer_id,
         org_id: data.org_id, // We'll pass org_id from controller
       },
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
 
     if (!customer) {

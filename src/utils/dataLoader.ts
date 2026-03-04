@@ -20,6 +20,20 @@ export const createCustomerLoader = () => {
             in: [...customerIds],
           },
         },
+        select: {
+          id: true,
+          org_id: true,
+          name: true,
+          email: true,
+          product_id: true,
+          status: true,
+          mrr: true,
+          credit_balance: true,
+          health_score: true,
+          logo_initials: true,
+          created_at: true,
+          updated_at: true,
+        },
       });
 
       // Create a map for O(1) lookup
@@ -103,7 +117,19 @@ export const createProductsByCustomerLoader = () => {
             in: [...customerIds],
           },
         },
-        include: {
+        select: {
+          id: true,
+          org_id: true,
+          name: true,
+          email: true,
+          product_id: true,
+          status: true,
+          mrr: true,
+          credit_balance: true,
+          health_score: true,
+          logo_initials: true,
+          created_at: true,
+          updated_at: true,
           products: true,
         },
       });

@@ -13,6 +13,24 @@ export class CustomerService {
         org_id: data.org_id,
         email: data.email,
       },
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        primary_contact: true,
+        phone: true,
+        billing_currency: true,
+        billing_cycle: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
 
     if (existingCustomer) {
@@ -30,18 +48,31 @@ export class CustomerService {
     try {
       return await prisma.customers.create({
         data: {
-          ...data,
-          logo_initials,
+          org_id: data.org_id,
+          name: data.name,
+          email: data.email,
+          product_id: data.product_id,
+          rate_card_override: data.rate_card_override,
           status: data.status || 'active',
           mrr: data.mrr || 0,
           credit_balance: data.credit_balance || 0,
           health_score: data.health_score || 75,
+          primary_contact: data.primary_contact,
+          phone: data.phone,
+          billing_currency: data.billing_currency || 'USD',
+          billing_cycle: data.billing_cycle || 'monthly',
+          logo_initials,
         },
         include: {
           products: {
             select: {
               name: true,
               base_price: true,
+            },
+          },
+          rate_cards: {
+            select: {
+              name: true,
             },
           },
         },
@@ -78,7 +109,23 @@ export class CustomerService {
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
-        include: {
+        select: {
+          id: true,
+          org_id: true,
+          name: true,
+          email: true,
+          product_id: true,
+          status: true,
+          mrr: true,
+          credit_balance: true,
+          health_score: true,
+          primary_contact: true,
+          phone: true,
+          billing_currency: true,
+          billing_cycle: true,
+          logo_initials: true,
+          created_at: true,
+          updated_at: true,
           products: {
             select: {
               name: true,
@@ -136,7 +183,23 @@ export class CustomerService {
         { [sortField]: sortOrder },
         { id: sortOrder }, // Secondary sort for consistency
       ],
-      include: {
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        primary_contact: true,
+        phone: true,
+        billing_currency: true,
+        billing_cycle: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
         products: {
           select: {
             name: true,
@@ -152,7 +215,23 @@ export class CustomerService {
   async findById(id: string) {
     const customer = await prisma.customers.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        org_id: true,
+        name: true,
+        email: true,
+        product_id: true,
+        status: true,
+        mrr: true,
+        credit_balance: true,
+        health_score: true,
+        primary_contact: true,
+        phone: true,
+        billing_currency: true,
+        billing_cycle: true,
+        logo_initials: true,
+        created_at: true,
+        updated_at: true,
         products: true,
         contracts: {
           where: { status: 'active' },
