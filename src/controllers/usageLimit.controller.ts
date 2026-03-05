@@ -538,13 +538,9 @@ export class UsageLimitController {
    *                   example: "Current usage data retrieved successfully"
    */
   getCurrentUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const filters = {
-      customer_id: req.query.customer_id as string,
-      product_id: req.query.product_id as string,
-      meter_id: req.query.meter_id as string,
-    };
+    const { page = 1, limit = 10, ...filters } = req.query as any;
 
-    const usageData = await usageLimitService.getCurrentUsage(req.user!.orgId, filters);
+    const usageData = await usageLimitService.getCurrentUsage(req.user!.orgId, filters, { page, limit });
     res.json(ApiResponse.success(usageData, 'Current usage data retrieved successfully'));
   });
 

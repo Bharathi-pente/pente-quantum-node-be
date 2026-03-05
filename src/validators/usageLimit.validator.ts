@@ -82,6 +82,8 @@ export const getLimitOverridesQuerySchema = z.object({
 
 export const getCurrentUsageQuerySchema = z.object({
   query: z.object({
+    page: z.string().optional().default('1').transform(val => parseInt(val)),
+    limit: z.string().optional().default('10').transform(val => parseInt(val)),
     customer_id: z.string().uuid().optional(),
     product_id: z.string().uuid().optional(),
     meter_id: z.string().uuid().optional(),

@@ -59,6 +59,16 @@ export class OrganizationController {
    *         name: limit
    *         schema:
    *           type: integer
+   *       - in: query
+   *         name: query
+   *         schema:
+   *           type: string
+   *         description: Search query for organization name, slug, or billing email
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: string
+   *         description: Filter by organization status
    *     responses:
    *       200:
    *         description: List of organizations
@@ -66,8 +76,14 @@ export class OrganizationController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.query as string;
+    const filters: Record<string, any> = {};
 
-    const { organizations, total } = await organizationService.findAll(undefined, page, limit);
+    if (req.query.status) {
+      filters.status = req.query.status;
+    }
+
+    const { organizations, total } = await organizationService.findAll(undefined, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
     res.json(ApiResponse.paginated(organizations, page, limit, total));
   });
 

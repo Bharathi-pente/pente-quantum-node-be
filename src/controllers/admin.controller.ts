@@ -109,17 +109,44 @@ export class AdminController {
    *       200:
    *         description: List of all meters
    */
-  getMeters = asyncHandler(async (_req: AuthRequest, res: Response) => {
-    const meters = await prisma.meters.findMany({
-      include: {
-        organizations: {
-          select: { name: true }
-        }
-      },
-      orderBy: { created_at: 'desc' }
-    });
+  getMeters = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const search = (req.query.search as string | undefined)?.trim();
+    const status = req.query.status as string | undefined;
+    const eventType = req.query.event_type as string | undefined;
+    const aggregation = req.query.aggregation as string | undefined;
+    const skip = (page - 1) * limit;
 
-    res.json(ApiResponse.success(meters));
+    const where: Record<string, any> = {};
+
+    if (status) where.status = status;
+    if (eventType) where.event_type = eventType;
+    if (aggregation) where.aggregation = aggregation;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { event_type: { contains: search, mode: 'insensitive' } },
+        { field: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [meters, total] = await Promise.all([
+      prisma.meters.findMany({
+        where,
+        include: {
+          organizations: {
+            select: { name: true }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.meters.count({ where })
+    ]);
+
+    res.json(ApiResponse.paginated(meters, page, limit, total));
   });
 
   /**

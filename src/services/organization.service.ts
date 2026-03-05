@@ -24,9 +24,26 @@ export class OrganizationService {
     });
   }
 
-  async findAll(orgId?: string, page = 1, limit = 10) {
+  async findAll(orgId?: string, page = 1, limit = 10, search?: string, filters?: Record<string, any>) {
     const skip = (page - 1) * limit;
-    const where = orgId ? { id: orgId } : {};
+    const where: any = orgId ? { id: orgId } : {};
+
+    // Add search functionality
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { billing_email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Add filters
+    if (filters) {
+      if (filters.status) {
+        where.status = filters.status;
+      }
+      // Add more filters as needed
+    }
 
     const [organizations, total] = await Promise.all([
       prisma.organizations.findMany({

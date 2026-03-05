@@ -513,7 +513,8 @@ export class UsageLimitService {
   }
 
   // Real-time usage methods
-  async getCurrentUsage(orgId: string, filters?: any) {
+  async getCurrentUsage(orgId: string, filters?: any, pagination?: { page: number; limit: number }) {
+    const { page = 1, limit = 10 } = pagination || {};
     // Get all usage limits for the organization
     const where: any = {
       products: {
@@ -602,7 +603,21 @@ export class UsageLimitService {
       )
     );
 
-    return currentUsage;
+    // Apply pagination
+    const total = currentUsage.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedData = currentUsage.slice(startIndex, endIndex);
+
+    return {
+      data: paginatedData,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getLimitCurrentUsage(limitId: string, orgId: string) {
@@ -689,22 +704,22 @@ export class UsageLimitService {
   }
 
   async getUsageStats(orgId: string, filters?: any) {
-    const usageData = await this.getCurrentUsage(orgId, filters);
+    const usageData = await this.getCurrentUsage(orgId, filters, { page: 1, limit: 100000 });
 
-    const totalLimits = usageData.length;
-    const activeLimits = usageData.filter(item => item.status !== 'exceeded').length;
-    const limitsAtWarning = usageData.filter(item => item.status === 'warning').length;
-    const limitsExceeded = usageData.filter(item => item.status === 'exceeded').length;
+    const totalLimits = usageData.data.length;
+    const activeLimits = usageData.data.filter((item: any) => item.status !== 'exceeded').length;
+    const limitsAtWarning = usageData.data.filter((item: any) => item.status === 'warning').length;
+    const limitsExceeded = usageData.data.filter((item: any) => item.status === 'exceeded').length;
 
-    const averageUsagePercentage = usageData.length > 0
-      ? usageData.reduce((sum, item) => sum + item.usage_percentage, 0) / usageData.length
+    const averageUsagePercentage = usageData.data.length > 0
+      ? usageData.data.reduce((sum: number, item: any) => sum + item.usage_percentage, 0) / usageData.data.length
       : 0;
 
     // Get top usage limits
-    const topUsageLimits = usageData
-      .sort((a, b) => b.usage_percentage - a.usage_percentage)
+    const topUsageLimits = usageData.data
+      .sort((a: any, b: any) => b.usage_percentage - a.usage_percentage)
       .slice(0, 10)
-      .map(item => ({
+      .map((item: any) => ({
         limit_id: item.limit_id,
         usage_percentage: item.usage_percentage,
         customer_name: item.customer_name,

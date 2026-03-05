@@ -95,7 +95,7 @@ export class CreditService {
   static async getCredits(query: GetCreditsInput['query'], orgId: string) {
     try {
       const { page = 1, limit = 10, customer_id, status, credit_type } = query;
-      const skip = (page - 1) * limit;
+      const skip = (Number(page) - 1) * Number(limit);
 
       const where: any = {
         customers: {
@@ -131,7 +131,7 @@ export class CreditService {
             created_at: 'desc'
           },
           skip,
-          take: limit
+          take: Number(limit)
         }),
         prisma.credits.count({ where })
       ]);
@@ -139,10 +139,10 @@ export class CreditService {
       return {
         credits,
         pagination: {
-          page,
-          limit,
+          page: Number(page),
+          limit: Number(limit),
           total,
-          pages: Math.ceil(total / limit)
+          pages: Math.ceil(total / Number(limit))
         }
       };
     } catch (error) {
