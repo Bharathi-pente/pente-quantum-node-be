@@ -27,6 +27,7 @@ export interface DunningWorkflowInput {
   invoiceNumber: string;
   amount: number;
   dueDate: Date;
+  sendFirstEmailImmediately?: boolean; // New flag for immediate first email
 }
 
 export interface DunningWorkflowStatus {
@@ -100,8 +101,9 @@ export async function dunningWorkflow(input: DunningWorkflowInput): Promise<stri
         await sleep('1 hour'); // Check every hour while paused
       }
 
-      // Wait for the step's day offset
-      if (step.day_offset > 0) {
+      // Wait for the step's day offset (skip for first step if sendFirstEmailImmediately is true)
+      const shouldWait = step.day_offset > 0 && !(i === 0 && input.sendFirstEmailImmediately);
+      if (shouldWait) {
         await sleep(`${step.day_offset} days`);
       }
 

@@ -19,6 +19,7 @@ export interface StartDunningWorkflowParams {
   amount: number;
   dueDate: Date;
   orgId: string;
+  sendFirstEmailImmediately?: boolean; // Optional flag to send first email immediately
 }
 
 export class DunningWorkflowService {
