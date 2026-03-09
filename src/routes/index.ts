@@ -26,6 +26,10 @@ import orgPaymentRoutes from './orgPayment.routes';
 import orgPaymentMethodRoutes from './orgPaymentMethod.routes';
 import dunningRoutes from './dunning.routes';
 import emailTemplateRoutes from './email-template.routes';
+import auditRoutes from './audit.routes';
+import dataRetentionRoutes from './data-retention.routes';
+import gdprRoutes from './gdpr.routes';
+import complianceRoutes from './compliance.routes';
 
 const router = Router();
 
@@ -73,5 +77,9 @@ router.use('/webhooks', webhookRoutes);
 router.use('/usage-events', usageRoutes);
 router.use('/dunning', dunningRoutes);
 router.use('/email-templates', emailTemplateRoutes);
+router.use('/audit', auditRoutes);
+router.use('/data-retention-policies', dataRetentionRoutes);
+router.use('/gdpr-requests', gdprRoutes);
+router.use('/compliance-reports', complianceRoutes);
 
 export default router;

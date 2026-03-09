@@ -1,8 +1,9 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import { AuditLogger } from '../utils/audit-logger';
 
 export class PaymentService {
-  async create(data: any, orgId: string) {
+  async create(data: any, orgId: string, request?: any) {
     // Validate invoice exists and belongs to org
     const invoice = await prisma.invoices.findFirst({
       where: {
@@ -17,6 +18,16 @@ export class PaymentService {
     });
 
     if (!invoice) {
+      // Log failed payment attempt
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'payment.create',
+        `Payment for invoice ${data.invoice_id}`,
+        null,
+        { reason: 'Invoice not found', invoice_id: data.invoice_id },
+        request
+      );
       throw ApiError.notFound('Invoice not found');
     }
 
@@ -29,6 +40,16 @@ export class PaymentService {
     });
 
     if (!paymentMethod) {
+      // Log failed payment attempt
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'payment.create',
+        `Payment for invoice ${data.invoice_id}`,
+        null,
+        { reason: 'Payment method not found', payment_method_id: data.payment_method_id },
+        request
+      );
       throw ApiError.notFound('Payment method not found or does not belong to customer');
     }
 
@@ -47,34 +68,79 @@ export class PaymentService {
     const outstandingAmount = Number(invoice.total) - Number(paidAmount);
 
     if (data.amount > outstandingAmount) {
+      // Log failed payment attempt
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'payment.create',
+        `Payment for invoice ${data.invoice_id}`,
+        null,
+        {
+          reason: 'Amount exceeds outstanding',
+          amount: data.amount,
+          outstanding: outstandingAmount
+        },
+        request
+      );
       throw ApiError.badRequest(`Payment amount (${data.amount}) exceeds outstanding invoice amount (${outstandingAmount})`);
     }
 
-    // Create payment
-    const payment = await prisma.payments.create({
-      data: {
-        invoice_id: data.invoice_id,
-        customer_id: invoice.customer_id,
-        amount: data.amount,
-        currency: data.currency || 'USD',
-        status: 'pending',
-        payment_method_id: data.payment_method_id,
-        payment_date: data.payment_date ? new Date(data.payment_date) : new Date(),
-        description: data.description,
-      },
-      include: {
-        customers: true,
-        invoices: true,
-        payment_methods: true,
-      },
-    });
+    try {
+      // Create payment
+      const payment = await prisma.payments.create({
+        data: {
+          invoice_id: data.invoice_id,
+          customer_id: invoice.customer_id,
+          amount: data.amount,
+          currency: data.currency || 'USD',
+          status: 'pending',
+          payment_method_id: data.payment_method_id,
+          payment_date: data.payment_date ? new Date(data.payment_date) : new Date(),
+          description: data.description,
+        },
+        include: {
+          customers: true,
+          invoices: true,
+          payment_methods: true,
+        },
+      });
 
-    // If payment succeeds, update invoice status
-    if (payment.status === 'succeeded' && payment.invoice_id) {
-      await this.updateInvoiceStatus(payment.invoice_id);
+      // Log successful payment creation
+      await AuditLogger.logSuccess(
+        orgId,
+        request?.user?.email || 'system',
+        'payment.created',
+        `Payment for ${invoice.invoice_number}`,
+        payment.id,
+        {
+          amount: data.amount,
+          currency: data.currency || 'USD',
+          customer: invoice.customers.name,
+          invoice_number: invoice.invoice_number,
+          method: paymentMethod.method_type,
+        },
+        request
+      );
+
+      // If payment succeeds, update invoice status
+      if (payment.status === 'succeeded' && payment.invoice_id) {
+        await this.updateInvoiceStatus(payment.invoice_id);
+      }
+
+      return payment;
+    } catch (error: any) {
+      // Log failed payment creation
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'payment.create',
+        `Payment for invoice ${data.invoice_id}`,
+        null,
+        { error: error.message },
+        request
+      );
+      throw error;
     }
-
-    return payment;
   }
 
   async findAll(orgId: string, page: number = 1, limit: number = 10, filters: any = {}) {

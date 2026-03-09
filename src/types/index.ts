@@ -62,3 +62,27 @@ export interface WebhookEvent {
   data: any;
   timestamp: Date;
 }
+
+export interface AuditLog {
+  id: string;
+  org_id: string;
+  actor: string;
+  actor_name?: string | null;
+  action: string;
+  resource_label?: string | null;
+  resource_id?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  status: string;
+  details?: any;
+  created_at: Date;
+}
+
+export interface AuditLogFilter extends FilterQuery {
+  actor?: string;
+  action?: string;
+  resource_id?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+}

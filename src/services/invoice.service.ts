@@ -1,8 +1,9 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import { AuditLogger } from '../utils/audit-logger';
 
 export class InvoiceService {
-  async create(data: any, orgId: string) {
+  async create(data: any, orgId: string, request?: any) {
     // Verify customer belongs to org
     const customer = await prisma.customers.findFirst({
       where: {
@@ -26,6 +27,16 @@ export class InvoiceService {
     });
 
     if (!customer) {
+      // Log failed invoice creation
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'invoice.create',
+        data.invoice_number,
+        null,
+        { reason: 'Invalid customer ID', customer_id: data.customer_id },
+        request
+      );
       throw ApiError.badRequest('Invalid customer ID or customer does not belong to your organization');
     }
 
@@ -35,6 +46,16 @@ export class InvoiceService {
     });
 
     if (existingInvoice) {
+      // Log failed invoice creation
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'invoice.create',
+        data.invoice_number,
+        null,
+        { reason: 'Invoice number already exists' },
+        request
+      );
       throw ApiError.conflict('Invoice number already exists');
     }
 
@@ -48,6 +69,16 @@ export class InvoiceService {
       });
 
       if (!paymentMethod) {
+        // Log failed invoice creation
+        await AuditLogger.logFailure(
+          orgId,
+          request?.user?.email || 'unknown',
+          'invoice.create',
+          data.invoice_number,
+          null,
+          { reason: 'Invalid payment method', payment_method_id: data.payment_method_id },
+          request
+        );
         throw ApiError.badRequest('Invalid payment method ID or payment method does not belong to the customer');
       }
     }
@@ -59,7 +90,7 @@ export class InvoiceService {
     const total = subtotal + taxAmount - creditsApplied;
 
     try {
-      return await prisma.invoices.create({
+      const invoice = await prisma.invoices.create({
         data: {
           invoice_number: data.invoice_number,
           customer_id: data.customer_id,
@@ -98,7 +129,37 @@ export class InvoiceService {
           },
         },
       });
+
+      // Log successful invoice creation
+      await AuditLogger.logSuccess(
+        orgId,
+        request?.user?.email || 'system',
+        'invoice.created',
+        data.invoice_number,
+        invoice.id,
+        {
+          customer: customer.name,
+          customer_id: data.customer_id,
+          total,
+          currency: data.currency || 'USD',
+          status: data.status || 'draft',
+        },
+        request
+      );
+
+      return invoice;
     } catch (error: any) {
+      // Log failed invoice creation
+      await AuditLogger.logFailure(
+        orgId,
+        request?.user?.email || 'unknown',
+        'invoice.create',
+        data.invoice_number,
+        null,
+        { error: error.message },
+        request
+      );
+
       if (error.code === 'P2003') {
         throw ApiError.badRequest('Invalid customer or payment method ID');
       }

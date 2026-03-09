@@ -2,74 +2,122 @@ import prisma from '../config/database';
 // import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import ApiError from '../utils/ApiError';
+import { AuditLogger } from '../utils/audit-logger';
 
 export class AuthService {
-  async login(email: string, _password: string) {
-    // Find user with role permissions
-    const user = await prisma.users.findUnique({
-      where: { email },
-      include: {
-        roles: {
-          include: {
-            role_permissions: true,
+  async login(email: string, _password: string, request?: any) {
+    try {
+      // Find user with role permissions
+      const user = await prisma.users.findUnique({
+        where: { email },
+        include: {
+          roles: {
+            include: {
+              role_permissions: true,
+            },
           },
+          organizations: true,
         },
-        organizations: true,
-      },
-    });
+      });
 
-    if (!user) {
-      throw ApiError.unauthorized('Invalid email or password');
+      if (!user) {
+        // Log failed login attempt
+        await AuditLogger.logFailure(
+          'unknown', // We don't know the org_id yet
+          email,
+          'user.login',
+          email,
+          null,
+          { reason: 'User not found' },
+          request
+        );
+        throw ApiError.unauthorized('Invalid email or password');
+      }
+
+      if (user.status !== 'active') {
+        // Log failed login attempt
+        await AuditLogger.logFailure(
+          user.org_id,
+          email,
+          'user.login',
+          email,
+          user.id,
+          { reason: 'Account not active', status: user.status },
+          request
+        );
+        throw ApiError.forbidden('Account is not active');
+      }
+
+      // Note: In production, you should store hashed passwords
+      // For now, we'll implement basic password checking
+      // const isPasswordValid = await bcrypt.compare(password, user.password);
+      // if (!isPasswordValid) {
+      //   throw ApiError.unauthorized('Invalid email or password');
+      // }
+
+      // Extract permissions
+      const permissions = user.roles?.role_permissions?.map(
+        (rp: any) => rp.permission
+      ) || [];
+
+      // Generate JWT token
+      // @ts-ignore
+      const token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          orgId: user.org_id,
+          roleId: user.role_id,
+          permissions,
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      );
+
+      // Update last active
+      await prisma.users.update({
+        where: { id: user.id },
+        data: { last_active_at: new Date() },
+      });
+
+      // Log successful login
+      await AuditLogger.logSuccess(
+        user.org_id,
+        email,
+        'user.login',
+        user.name || email,
+        user.id,
+        { method: 'password', role: user.roles?.name },
+        request
+      );
+
+      return {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          orgId: user.org_id,
+          organization: user.organizations?.name,
+          role: user.roles?.name,
+          permissions,
+        },
+      };
+    } catch (error: any) {
+      // If it's not already logged above, log the failure
+      if (error.message !== 'Invalid email or password' && error.message !== 'Account is not active') {
+        await AuditLogger.logFailure(
+          'unknown',
+          email,
+          'user.login',
+          email,
+          null,
+          { error: error.message },
+          request
+        );
+      }
+      throw error;
     }
-
-    if (user.status !== 'active') {
-      throw ApiError.forbidden('Account is not active');
-    }
-
-    // Note: In production, you should store hashed passwords
-    // For now, we'll implement basic password checking
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    // if (!isPasswordValid) {
-    //   throw ApiError.unauthorized('Invalid email or password');
-    // }
-
-    // Extract permissions
-    const permissions = user.roles?.role_permissions?.map(
-      (rp: any) => rp.permission
-    ) || [];
-
-    // Generate JWT token
-    // @ts-ignore
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        orgId: user.org_id,
-        roleId: user.role_id,
-        permissions,
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
-
-    // Update last active
-    await prisma.users.update({
-      where: { id: user.id },
-      data: { last_active_at: new Date() },
-    });
-
-    return {
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        orgId: user.org_id,
-        organization: user.organizations?.name,
-        role: user.roles?.name,
-        permissions,
-      },
-    };
   }
 
   async register(data: any) {

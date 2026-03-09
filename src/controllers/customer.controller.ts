@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/keycloakAuth.middleware';
 import customerService from '../services/customer.service';
 import ApiResponse from '../utils/ApiResponse';
@@ -129,8 +129,8 @@ export class CustomerController {
    *                       format: date-time
    *                       example: "2023-10-01T00:00:00.000Z"
    */
-  create = asyncHandler(async (req: Request, res: Response) => {
-    const customer = await customerService.create(req.body);
+  create = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const customer = await customerService.create(req.body, req);
     res.status(201).json(ApiResponse.success(customer, 'Customer created successfully'));
   });
 

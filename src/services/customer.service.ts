@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import { AuditLogger } from '../utils/audit-logger';
 import {
   CursorPaginationOptions,
   buildCursorWhere,
@@ -7,7 +8,7 @@ import {
 } from '../utils/pagination';
 
 export class CustomerService {
-  async create(data: any) {
+  async create(data: any, request?: any) {
     const existingCustomer = await prisma.customers.findFirst({
       where: {
         org_id: data.org_id,
@@ -34,6 +35,16 @@ export class CustomerService {
     });
 
     if (existingCustomer) {
+      // Log failed attempt
+      await AuditLogger.logFailure(
+        data.org_id,
+        request?.user?.email || 'unknown',
+        'customer.create',
+        data.name,
+        null,
+        { reason: 'Customer with this email already exists', email: data.email },
+        request
+      );
       throw ApiError.conflict('Customer with this email already exists in your organization');
     }
 
@@ -46,7 +57,7 @@ export class CustomerService {
       .substring(0, 2);
 
     try {
-      return await prisma.customers.create({
+      const customer = await prisma.customers.create({
         data: {
           org_id: data.org_id,
           name: data.name,
@@ -77,7 +88,38 @@ export class CustomerService {
           },
         },
       });
+
+      // Log successful customer creation
+      await AuditLogger.logSuccess(
+        data.org_id,
+        request?.user?.email || 'system',
+        'customer.created',
+        data.name,
+        customer.id,
+        {
+          email: data.email,
+          product_id: data.product_id,
+          status: data.status || 'active',
+          mrr: data.mrr || 0,
+          billing_currency: data.billing_currency || 'USD',
+          billing_cycle: data.billing_cycle || 'monthly',
+        },
+        request
+      );
+
+      return customer;
     } catch (error: any) {
+      // Log failed customer creation
+      await AuditLogger.logFailure(
+        data.org_id,
+        request?.user?.email || 'unknown',
+        'customer.create',
+        data.name,
+        null,
+        { error: error.message },
+        request
+      );
+
       if (error.code === 'P2003') {
         // Foreign key constraint violation
         throw ApiError.badRequest('Invalid organization or product ID');

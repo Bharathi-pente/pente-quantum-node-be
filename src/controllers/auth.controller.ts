@@ -38,7 +38,7 @@ export class AuthController {
    */
   login = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { email, password } = req.body;
-    const result = await authService.login(email, password);
+    const result = await authService.login(email, password, req);
     res.json(ApiResponse.success(result, 'Login successful'));
   });
 

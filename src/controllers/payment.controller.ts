@@ -58,7 +58,7 @@ export class PaymentController {
    *         description: Payment created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const payment = await paymentService.create(req.body, req.user!.orgId);
+    const payment = await paymentService.create(req.body, req.user!.orgId, req);
     res.status(201).json(ApiResponse.success(payment, 'Payment created successfully'));
   });
 

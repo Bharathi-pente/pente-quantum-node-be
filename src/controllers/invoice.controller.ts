@@ -79,7 +79,7 @@ export class InvoiceController {
    *         description: Invoice created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const invoice = await invoiceService.create(req.body, req.user!.orgId);
+    const invoice = await invoiceService.create(req.body, req.user!.orgId, req);
     res.status(201).json(ApiResponse.success(invoice, 'Invoice created successfully'));
   });
 

@@ -51,7 +51,7 @@ console.log('  - URL:', KEYCLOAK_URL);
 console.log('  - Realm:', KEYCLOAK_REALM);
 console.log('  - JWKS URL:', JWKS_URL);
 console.log('  - Expected Issuer:', `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`);
-console.log('  - Default Org ID:', process.env.DEFAULT_ORG_ID || 'default-org-id');
+console.log('  - Default Org ID:', process.env.DEFAULT_ORG_ID || '11111111-1111-1111-1111-111111111111');
 
 // Fetch and filter JWKS to only include signing keys
 let jwksCache: any = null;
@@ -255,7 +255,7 @@ export const authenticateKeycloak = async (
     let orgId = (keycloakPayload.organization_id as string) || 
                 (keycloakPayload.org_id as string) ||
                 process.env.DEFAULT_ORG_ID || 
-                'default-org-id';
+                '11111111-1111-1111-1111-111111111111';
 
     // Attach user to request
     req.user = {
