@@ -2,8 +2,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/keycloakAuth.middleware';
 import dunningService from '../services/dunning.service';
 import { dunningWorkflowService } from '../services/dunning.workflow.service';
+import { dunningSchedulerService } from '../services/dunning.scheduler.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
+import prisma from '../config/database';
 
 /**
  * @swagger
@@ -458,6 +460,94 @@ export class DunningController {
 
     const status = await dunningWorkflowService.queryWorkflowStatus(workflowId);
     return res.status(200).json(ApiResponse.success(status, 'Workflow status queried successfully'));
+  });
+
+  /**
+   * @swagger
+   * /dunning/process-overdue:
+   *   post:
+   *     summary: Process all overdue invoices and start dunning workflows
+   *     tags: [Dunning]
+   *     description: Checks for all overdue invoices and automatically starts dunning workflows for them
+   *     responses:
+   *       200:
+   *         description: Overdue invoices processed successfully
+   */
+  processOverdueInvoices = asyncHandler(async (_req: AuthRequest, res: Response) => {
+    await dunningSchedulerService.processOverdueInvoices();
+    return res.status(200).json(ApiResponse.success(null, 'Overdue invoices processed successfully'));
+  });
+
+  /**
+   * @swagger
+   * /dunning/send-reminder/{invoiceId}:
+   *   post:
+   *     summary: Send manual reminder email for invoice
+   *     tags: [Dunning]
+   *     parameters:
+   *       - in: path
+   *         name: invoiceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Reminder email sent successfully
+   */
+  sendManualReminder = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { invoiceId } = req.params;
+    const orgId = req.user?.orgId;
+
+    if (!orgId) {
+      return res.status(400).json(ApiResponse.error('Organization ID not found'));
+    }
+
+    // Get invoice details
+    const invoice = await prisma.invoices.findFirst({
+      where: { id: invoiceId },
+      include: {
+        customers: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            org_id: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      return res.status(404).json(ApiResponse.error('Invoice not found'));
+    }
+
+    if (!invoice.customers) {
+      return res.status(400).json(ApiResponse.error('Customer not found for invoice'));
+    }
+
+    // Check if invoice belongs to user's org
+    if (invoice.customers.org_id !== orgId) {
+      return res.status(403).json(ApiResponse.error('Access denied'));
+    }
+
+    // Import and call sendDunningEmail
+    const { sendDunningEmailInternal } = await import('../activities/dunning.activities');
+
+    await sendDunningEmailInternal({
+      to: invoice.customers.email,
+      customerName: invoice.customers.name,
+      invoiceNumber: invoice.invoice_number,
+      amount: Number(invoice.total),
+      dueDate: invoice.due_date,
+      stepNumber: 0, // Manual reminder
+      templateName: 'payment_reminder',
+      subject: `Payment Reminder - Invoice ${invoice.invoice_number}`,
+      orgId,
+      customerId: invoice.customer_id,
+      invoiceId,
+    });
+
+    return res.status(200).json(ApiResponse.success(null, 'Reminder email sent successfully'));
   });
 }
 

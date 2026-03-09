@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import organizationRoutes from './organization.routes';
 import userRoutes from './user.routes';
+import roleRoutes from './role.routes';
 import customerRoutes from './customer.routes';
 import productRoutes from './product.routes';
 import featureRoutes from './feature.routes';
@@ -24,6 +25,7 @@ import usageRoutes from './usage.routes';
 import orgPaymentRoutes from './orgPayment.routes';
 import orgPaymentMethodRoutes from './orgPaymentMethod.routes';
 import dunningRoutes from './dunning.routes';
+import emailTemplateRoutes from './email-template.routes';
 
 const router = Router();
 
@@ -46,6 +48,7 @@ router.get('/health', (_req, res) => {
 // Users must authenticate through Keycloak instead.
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);
+router.use('/roles', roleRoutes);
 router.use('/customers', customerRoutes);
 router.use('/products', productRoutes);
 router.use('/features', featureRoutes);
@@ -69,5 +72,6 @@ router.use('/currency', currencyRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/usage-events', usageRoutes);
 router.use('/dunning', dunningRoutes);
+router.use('/email-templates', emailTemplateRoutes);
 
 export default router;

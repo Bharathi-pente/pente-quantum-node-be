@@ -44,6 +44,7 @@ async function checkInvoices() {
       console.log(`   Due Date: ${inv.due_date.toISOString().split('T')[0]}`);
       console.log(`   Amount: $${inv.total_amount}`);
       console.log(`   Status: ${inv.status}`);
+      console.log(`   Dunning Step: ${inv.dunning_step}`);
       console.log('');
     });
 

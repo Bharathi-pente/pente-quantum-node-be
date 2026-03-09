@@ -73,9 +73,61 @@ export class CustomerController {
    *                 type: string
    *                 enum: [monthly, quarterly, annual]
    *                 description: Billing cycle (optional, default monthly)
+   *           example:
+   *             name: "Acme Corp"
+   *             email: "billing@acme.com"
+   *             org_id: "123e4567-e89b-12d3-a456-426614174000"
+   *             product_id: "456e7890-e89b-12d3-a456-426614174001"
+   *             status: "active"
+   *             mrr: 99.99
+   *             credit_balance: 0
+   *             health_score: 85
+   *             primary_contact: "John Doe"
+   *             phone: "+1-555-0123"
+   *             billing_currency: "USD"
+   *             billing_cycle: "monthly"
    *     responses:
    *       201:
    *         description: Customer created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: "Customer created successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     id:
+   *                       type: string
+   *                       format: uuid
+   *                       example: "123e4567-e89b-12d3-a456-426614174000"
+   *                     name:
+   *                       type: string
+   *                       example: "Acme Corp"
+   *                     email:
+   *                       type: string
+   *                       example: "billing@acme.com"
+   *                     org_id:
+   *                       type: string
+   *                       format: uuid
+   *                       example: "123e4567-e89b-12d3-a456-426614174000"
+   *                     status:
+   *                       type: string
+   *                       example: "active"
+   *                     created_at:
+   *                       type: string
+   *                       format: date-time
+   *                       example: "2023-10-01T00:00:00.000Z"
+   *                     updated_at:
+   *                       type: string
+   *                       format: date-time
+   *                       example: "2023-10-01T00:00:00.000Z"
    */
   create = asyncHandler(async (req: Request, res: Response) => {
     const customer = await customerService.create(req.body);

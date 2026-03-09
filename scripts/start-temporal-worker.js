@@ -11,14 +11,13 @@ const path = require('path');
 
 console.log('Starting Temporal Dunning Worker in development mode...');
 
-// Start the worker with ts-node for TypeScript support
-const workerProcess = spawn('npx', [
-  'ts-node',
-  '--transpile-only',
-  path.join(__dirname, 'src/workers/dunning.worker.ts')
+// Start the worker with ts-node for development
+const workerProcess = spawn('node', [
+  './node_modules/.bin/ts-node.cmd',
+  path.join(__dirname, '../src/workers/dunning.worker.ts')
 ], {
   stdio: 'inherit',
-  cwd: __dirname,
+  cwd: path.join(__dirname, '..'), // Run from backend root directory
   env: {
     ...process.env,
     NODE_ENV: 'development',

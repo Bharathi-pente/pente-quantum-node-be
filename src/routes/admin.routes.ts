@@ -14,6 +14,7 @@ const router = Router();
 // Apply authentication to all admin routes
 router.use(authenticateKeycloak);
 
+router.get('/analytics', adminController.getAnalytics);
 router.get('/metrics', adminController.getPlatformMetrics);
 router.get('/meters', adminController.getMeters);
 router.get('/pricing-models', adminController.getPricingModels);

@@ -27,7 +27,6 @@ export class UserController {
    *             required:
    *               - name
    *               - email
-   *               - password
    *               - org_id
    *               - role_id
    *             properties:
@@ -41,7 +40,7 @@ export class UserController {
    *               password:
    *                 type: string
    *                 minLength: 8
-   *                 description: User password
+   *                 description: User password (optional)
    *               org_id:
    *                 type: string
    *                 format: uuid
@@ -78,9 +77,16 @@ export class UserController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const role_id = req.query.role_id as string;
     const orgId = req.user?.orgId!;
 
-    const { users, total } = await userService.findAll(orgId, page, limit);
+    const filters: any = {};
+    if (status) filters.status = status;
+    if (role_id) filters.role_id = role_id;
+
+    const { users, total } = await userService.findAll(orgId, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
     res.json(ApiResponse.paginated(users, page, limit, total));
   });
 

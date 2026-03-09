@@ -24,10 +24,11 @@ const alertsController = new AlertsController();
 /**
  * @route   POST /api/v1/organizations
  * @desc    Create organization
- * @access  Public (for initial setup)
+ * @access  Private
  */
 router.post(
   '/',
+  authenticateKeycloak,
   validate(createOrganizationSchema),
   organizationController.create
 );

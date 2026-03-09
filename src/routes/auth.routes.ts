@@ -10,18 +10,18 @@ const router = Router();
 /**
  * @route   POST /api/v1/auth/login
  * @desc    Login user (DEPRECATED - use Keycloak)
- * @access  Public
+ * @access  Private
  * @deprecated Use Keycloak authentication instead
  */
-router.post('/login', authLimiter, validate(loginSchema), authController.login);
+router.post('/login', authenticateKeycloak, authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @route   POST /api/v1/auth/register
  * @desc    Register new user (DEPRECATED - use Keycloak)
- * @access  Public
+ * @access  Private
  * @deprecated Use Keycloak user management instead
  */
-router.post('/register', authLimiter, validate(createUserSchema), authController.register);
+router.post('/register', authenticateKeycloak, authLimiter, validate(createUserSchema), authController.register);
 
 /**
  * @route   GET /api/v1/auth/me
@@ -33,9 +33,9 @@ router.get('/me', authenticateKeycloak, authController.getCurrentUser);
 /**
  * @route   POST /api/v1/auth/validate
  * @desc    Validate JWT token (DEPRECATED - Keycloak handles this)
- * @access  Public
+ * @access  Private
  * @deprecated Token validation is handled by Keycloak middleware
  */
-router.post('/validate', authController.validateToken);
+router.post('/validate', authenticateKeycloak, authController.validateToken);
 
 export default router;

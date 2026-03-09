@@ -62,10 +62,50 @@ export class OrganizationService {
       prisma.organizations.count({ where }),
     ]);
 
-    // Transform the data to include customer count
+    // Get MRR sums for these organizations
+    const orgIds = organizations.map(org => org.id);
+    const mrrSums = await prisma.customers.groupBy({
+      by: ['org_id'],
+      where: {
+        org_id: { in: orgIds },
+        status: 'active', // Only count active customers
+      },
+      _sum: {
+        mrr: true,
+      },
+    });
+
+    // Get events count for last 30 days per organization
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const eventsCounts = await prisma.usage_events.groupBy({
+      by: ['org_id'],
+      where: {
+        org_id: { in: orgIds },
+        created_at: { gte: thirtyDaysAgo }
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    // Create maps
+    const mrrMap = new Map<string, number>();
+    mrrSums.forEach(sum => {
+      mrrMap.set(sum.org_id, Number(sum._sum.mrr) || 0);
+    });
+
+    const eventsMap = new Map<string, number>();
+    eventsCounts.forEach(count => {
+      eventsMap.set(count.org_id, count._count.id);
+    });
+
+    // Transform the data to include customer count, MRR, and events
     const transformedOrganizations = organizations.map(org => ({
       ...org,
       customers: org._count.customers,
+      mrr: mrrMap.get(org.id) || 0,
+      totalEvents: eventsMap.get(org.id) || 0,
+      growth: 0, // Placeholder for growth calculation
       _count: undefined, // Remove the _count field
     }));
 

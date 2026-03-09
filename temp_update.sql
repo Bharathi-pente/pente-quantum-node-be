@@ -1,0 +1,1 @@
+DELETE FROM dunning_policies WHERE id = 'e46bcb29-39ed-41c8-8f77-435afcd1c375';

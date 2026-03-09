@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import emailTemplateService from './email-template.service';
 
 export interface DunningPolicyData {
   org_id: string;
@@ -118,7 +119,7 @@ export class DunningService {
 
     const nextSortOrder = (maxSortOrder?.sort_order || 0) + 1;
 
-    return await prisma.dunning_steps.create({
+    const created = await prisma.dunning_steps.create({
       data: {
         policy_id,
         day_offset,
@@ -131,6 +132,17 @@ export class DunningService {
         sort_order: sort_order || nextSortOrder,
       },
     });
+
+    // Increment template usage count if a template was attached
+    if (template_name) {
+      // need org_id for template usage tracking
+      const policy = await prisma.dunning_policies.findUnique({ where: { id: policy_id } });
+      if (policy) {
+        await emailTemplateService.incrementUsageCount(template_name, policy.org_id);
+      }
+    }
+
+    return created;
   }
 
   async updateStep(id: string, policyId: string, data: Partial<DunningStepData>) {
@@ -142,10 +154,25 @@ export class DunningService {
       throw ApiError.notFound('Dunning step not found');
     }
 
-    return await prisma.dunning_steps.update({
-      where: { id },
-      data,
-    });
+    // If template_name is being changed, update usage counts accordingly
+    const prevTemplate = step.template_name;
+    const newTemplate = data.template_name;
+
+    const updated = await prisma.dunning_steps.update({ where: { id }, data });
+
+    if (prevTemplate !== newTemplate) {
+      const policy = await prisma.dunning_policies.findUnique({ where: { id: policyId } });
+      if (policy) {
+        if (prevTemplate) {
+          await emailTemplateService.decrementUsageCount(prevTemplate, policy.org_id);
+        }
+        if (newTemplate) {
+          await emailTemplateService.incrementUsageCount(newTemplate, policy.org_id);
+        }
+      }
+    }
+
+    return updated;
   }
 
   async deleteStep(id: string, policyId: string) {
@@ -157,20 +184,27 @@ export class DunningService {
       throw ApiError.notFound('Dunning step not found');
     }
 
-    await prisma.dunning_steps.delete({
-      where: { id },
-    });
+    await prisma.dunning_steps.delete({ where: { id } });
+
+    // Decrement template usage if this step referenced a template
+    if (step.template_name) {
+      const policy = await prisma.dunning_policies.findUnique({ where: { id: policyId } });
+      if (policy) {
+        await emailTemplateService.decrementUsageCount(step.template_name, policy.org_id);
+      }
+    }
 
     return { message: 'Dunning step deleted successfully' };
   }
 
   async getOverdueInvoices(orgId: string) {
-    return await prisma.invoices.findMany({
+    const now = new Date();
+    const invoices = await prisma.invoices.findMany({
       where: {
         customers: { org_id: orgId },
-        status: 'overdue',
+        status: { in: ['pending', 'overdue'] },
         due_date: {
-          lt: new Date(),
+          lt: now,
         },
       },
       include: {
@@ -184,6 +218,27 @@ export class DunningService {
       },
       orderBy: { due_date: 'asc' },
     });
+
+    // Map to frontend-friendly format
+    return invoices.map(invoice => ({
+      id: invoice.id,
+      number: invoice.invoice_number,
+      customerId: invoice.customer_id,
+      customerName: invoice.customers?.name || 'Unknown Customer',
+      customerEmail: invoice.customers?.email || '',
+      status: invoice.status,
+      issueDate: invoice.issue_date.toISOString(),
+      dueDate: invoice.due_date.toISOString(),
+      paidDate: invoice.paid_date?.toISOString() || null,
+      subtotal: parseFloat(invoice.subtotal.toString()),
+      credits: parseFloat((invoice.credits_applied || 0).toString()),
+      tax: parseFloat((invoice.tax_amount || 0).toString()),
+      taxRate: parseFloat((invoice.tax_rate || 0).toString()),
+      total: parseFloat(invoice.total.toString()),
+      currency: invoice.currency || 'USD',
+      dunning_step: invoice.dunning_step || 0,
+      notes: invoice.notes || '',
+    }));
   }
 }
 

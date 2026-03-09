@@ -6,19 +6,14 @@
 
 import { Worker } from '@temporalio/worker';
 import * as activities from '../activities/dunning.activities';
-import { createTemporalClient } from '../config/temporal';
 
 async function runWorker() {
   try {
-    // Create Temporal client
-    const client = await createTemporalClient();
-
     // Create worker
     const worker = await Worker.create({
       workflowsPath: require.resolve('../workflows/dunning.workflow'),
       activities,
       taskQueue: 'dunning-queue',
-      connection: client.connection as any, // Type assertion needed due to version differences
     });
 
     console.log('Starting Temporal worker for dunning workflows...');

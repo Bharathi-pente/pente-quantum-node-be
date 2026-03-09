@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "dev:workers": "nodemon src/workers/index.ts",
-    "dev:temporal": "node scripts/start-temporal-worker.js",
+    "dev:temporal": "nodemon --exec \"ts-node\" src/workers/dunning.worker.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "start:workers": "node dist/workers/index.js",
@@ -27,6 +27,8 @@
     "test:integration": "jest --testPathPattern=integration",
     "test:smtp": "node scripts/test-smtp.js",
     "test:dunning": "node scripts/test-dunning-emails.js",
+    "dunning:start": "node scripts/start-dunning-workflows.js",
+    "dunning:check-overdue": "node scripts/check-overdue-invoices.js",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix"
   },

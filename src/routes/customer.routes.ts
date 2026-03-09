@@ -15,10 +15,11 @@ const router = Router();
 /**
  * @route   POST /api/v1/customers
  * @desc    Create customer
- * @access  Public (for testing)
+ * @access  Private
  */
 router.post(
   '/',
+  authenticateKeycloak,
   validate(createCustomerSchema),
   customerController.create
 );

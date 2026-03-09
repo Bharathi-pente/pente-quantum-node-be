@@ -124,6 +124,9 @@ export async function dunningWorkflow(input: DunningWorkflowInput): Promise<stri
             stepNumber: i + 1,
             templateName: step.template_name,
             subject: step.subject,
+            orgId: input.orgId,
+            customerId: input.customerId,
+            invoiceId: input.invoiceId,
           });
           break;
 

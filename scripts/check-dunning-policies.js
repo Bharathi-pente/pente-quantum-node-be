@@ -31,6 +31,8 @@ async function checkPolicies() {
 
     policies.forEach((policy, index) => {
       console.log(`${index + 1}. ${policy.name} (ID: ${policy.id}) - ${policy.status}`);
+      console.log(`   Org ID: ${policy.org_id}`);
+      console.log(`   Is Default: ${policy.is_default}`);
       console.log(`   Description: ${policy.description || 'No description'}`);
       console.log(`   Steps: ${policy.dunning_steps.length}`);
 

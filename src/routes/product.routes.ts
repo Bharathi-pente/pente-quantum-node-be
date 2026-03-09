@@ -15,10 +15,11 @@ const router = Router();
 /**
  * @route   POST /api/v1/products
  * @desc    Create product
- * @access  Public (for testing)
+ * @access  Private
  */
 router.post(
   '/',
+  authenticateKeycloak,
   validate(createProductSchema),
   productController.create
 );

@@ -143,4 +143,15 @@ router.post(
  */
 router.get('/workflows/:workflowId/query', dunningController.queryWorkflowStatus);
 
+/**
+ * @route   POST /api/v1/dunning/send-reminder/:invoiceId
+ * @desc    Send manual reminder email for invoice
+ * @access  Private (Admin/Finance)
+ */
+router.post(
+  '/send-reminder/:invoiceId',
+  requireRole('admin', 'finance'),
+  dunningController.sendManualReminder
+);
+
 export default router;

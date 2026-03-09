@@ -13,10 +13,11 @@ const router = Router();
 /**
  * @route   POST /api/v1/users
  * @desc    Create user
- * @access  Public (for testing)
+ * @access  Private
  */
 router.post(
   '/',
+  authenticateKeycloak,
   validate(createUserSchema),
   userController.create
 );

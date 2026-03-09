@@ -1,6 +1,7 @@
 import app from './app';
 import logger from './config/logger';
 import prisma from './config/database';
+import { dunningSchedulerService } from './services/dunning.scheduler.service';
 
 // Port
 const PORT = process.env.PORT || 5000;
@@ -18,6 +19,15 @@ const server = app.listen(PORT, () => {
   ║                                                           ║
   ╚═══════════════════════════════════════════════════════════╝
   `);
+
+  // Start dunning scheduler if enabled
+  if (process.env.ENABLE_DUNNING_SCHEDULER === 'true') {
+    const intervalMinutes = parseInt(process.env.DUNNING_SCHEDULER_INTERVAL || '60');
+    logger.info(`Starting automatic dunning scheduler (interval: ${intervalMinutes} minutes)`);
+    dunningSchedulerService.startScheduler(intervalMinutes);
+  } else {
+    logger.info('Automatic dunning scheduler is disabled. Set ENABLE_DUNNING_SCHEDULER=true to enable.');
+  }
 });
 
 // Graceful shutdown

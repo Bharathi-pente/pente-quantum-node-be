@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import ApiError from '../utils/ApiError';
 import logger from '../config/logger';
 import { sanitizeLog } from '../utils/logSanitizer';
+import Sentry from '../config/sentry';
 
 export const errorHandler = (
   err: Error | ApiError,
@@ -23,6 +24,9 @@ export const errorHandler = (
   logger.error(
     sanitizeLog(`[${req.method}] ${req.path} >> StatusCode: ${statusCode}, Message: ${message}`)
   );
+  
+  // Send error to Sentry for monitoring
+  Sentry.captureException(err);
   
   // Log stack trace for debugging (sanitized)
   if (process.env.NODE_ENV === 'development') {

@@ -54,12 +54,29 @@ export class UserService {
     }
   }
 
-  async findAll(orgId: string, page = 1, limit = 10) {
+  async findAll(orgId: string, page = 1, limit = 10, search?: string, filters?: any) {
     const skip = (page - 1) * limit;
+
+    const where: any = { org_id: orgId };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    if (filters?.role_id) {
+      where.role_id = filters.role_id;
+    }
 
     const [users, total] = await Promise.all([
       prisma.users.findMany({
-        where: { org_id: orgId },
+        where,
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
@@ -72,7 +89,7 @@ export class UserService {
           },
         },
       }),
-      prisma.users.count({ where: { org_id: orgId } }),
+      prisma.users.count({ where }),
     ]);
 
     return { users, total, page, limit };

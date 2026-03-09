@@ -4,7 +4,7 @@ export const createUserSchema = z.object({
   body: z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
     org_id: z.string().uuid('Invalid organization ID'),
     role_id: z.string().uuid('Invalid role ID'),
     status: z.enum(['active', 'invited', 'deactivated']).optional(),
