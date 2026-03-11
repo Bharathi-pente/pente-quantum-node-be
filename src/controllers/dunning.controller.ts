@@ -540,7 +540,7 @@ export class DunningController {
       amount: Number(invoice.total),
       dueDate: invoice.due_date,
       stepNumber: 0, // Manual reminder
-      templateName: 'payment_reminder',
+      templateName: 'payment_reminders',
       subject: `Payment Reminder - Invoice ${invoice.invoice_number}`,
       orgId,
       customerId: invoice.customer_id,

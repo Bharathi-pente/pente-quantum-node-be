@@ -144,6 +144,13 @@ export class EmailTemplateService {
     let html = template.html_content;
     let text = template.text_content || '';
 
+    // First, convert literal \n strings to actual newlines
+    html = html.replace(/\\n/g, '\n');
+    if (text) {
+      text = text.replace(/\\n/g, '\n');
+    }
+
+    // Replace template variables
     Object.entries(variables).forEach(([key, value]) => {
       const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
       subject = subject.replace(regex, String(value));
