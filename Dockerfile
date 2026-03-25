@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════════════
 #
 # Build: docker build -t quantum-billing-backend .
-# Run: docker run -p 3000:3000 --env-file .env quantum-billing-backend
+# Run: docker run -p 5000:5000 --env-file .env quantum-billing-backend
 #
 # ═══════════════════════════════════════════════════════════
 
@@ -50,11 +50,11 @@ RUN addgroup -g 1001 -S nodejs && \
 USER nodejs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 5000
 
 # Environment variables (can be overridden at runtime)
 ENV NODE_ENV=production \
-    PORT=3000
+    PORT=5000
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
