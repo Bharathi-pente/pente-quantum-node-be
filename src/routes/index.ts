@@ -31,6 +31,7 @@ import dataRetentionRoutes from './data-retention.routes';
 import gdprRoutes from './gdpr.routes';
 import complianceRoutes from './compliance.routes';
 import externalEventsRoutes from './externalEvents.routes';
+import apiKeyRoutes from './apiKey.routes';
 
 const router = Router();
 
@@ -83,5 +84,6 @@ router.use('/data-retention-policies', dataRetentionRoutes);
 router.use('/gdpr-requests', gdprRoutes);
 router.use('/compliance-reports', complianceRoutes);
 router.use('/user/events', externalEventsRoutes);
+router.use('/user/apikeys', apiKeyRoutes);
 
 export default router;

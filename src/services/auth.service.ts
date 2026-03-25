@@ -1,11 +1,10 @@
 import prisma from '../config/database';
-// import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret } from 'jsonwebtoken';
 import ApiError from '../utils/ApiError';
 import { AuditLogger } from '../utils/audit-logger';
 
 export class AuthService {
-  async login(email: string, _password: string, request?: any) {
+  async login(email: string, password: string, request?: any) {
     try {
       // Find user with role permissions
       const user = await prisma.users.findUnique({
@@ -48,12 +47,29 @@ export class AuthService {
         throw ApiError.forbidden('Account is not active');
       }
 
-      // Note: In production, you should store hashed passwords
-      // For now, we'll implement basic password checking
-      // const isPasswordValid = await bcrypt.compare(password, user.password);
-      // if (!isPasswordValid) {
-      //   throw ApiError.unauthorized('Invalid email or password');
-      // }
+      // Legacy password authentication is not supported when user records
+      // do not contain a password field in the database. This backend uses
+      // Keycloak for authentication. If a password field exists, compare it.
+      if ((user as any).password) {
+        // Dynamically import bcrypt only when needed
+        const bcrypt = await import('bcryptjs');
+        const isPasswordValid = await bcrypt.compare(password, (user as any).password);
+        if (!isPasswordValid) {
+          await AuditLogger.logFailure(
+            user.org_id,
+            email,
+            'user.login',
+            email,
+            user.id,
+            { reason: 'Invalid password' },
+            request
+          );
+          throw ApiError.unauthorized('Invalid email or password');
+        }
+      } else {
+        // No password stored for user: disallow legacy login
+        throw ApiError.unauthorized('Legacy password authentication is disabled; use Keycloak');
+      }
 
       // Extract permissions
       const permissions = user.roles?.role_permissions?.map(
@@ -61,7 +77,8 @@ export class AuthService {
       ) || [];
 
       // Generate JWT token
-      // @ts-ignore
+      const secret: Secret = process.env.JWT_SECRET as Secret;
+      const options: any = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };
       const token = jwt.sign(
         {
           id: user.id,
@@ -70,8 +87,8 @@ export class AuthService {
           roleId: user.role_id,
           permissions,
         },
-        process.env.JWT_SECRET!,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        secret,
+        options,
       );
 
       // Update last active
@@ -129,7 +146,8 @@ export class AuthService {
       throw ApiError.conflict('User already exists');
     }
 
-    // const hashedPassword = await bcrypt.hash(data.password, 10);
+    // The users table in this schema does not include a password column.
+    // If password storage is added in future, hash and store it here.
 
     const avatar_initials = data.name
       .split(' ')
@@ -149,7 +167,8 @@ export class AuthService {
       },
     });
 
-    // @ts-ignore
+    const secret2: Secret = process.env.JWT_SECRET as Secret;
+    const options2: any = { expiresIn: process.env.JWT_EXPIRES_IN || '7d' };
     const token = jwt.sign(
       {
         id: user.id,
@@ -157,8 +176,8 @@ export class AuthService {
         orgId: user.org_id,
         roleId: user.role_id,
       },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      secret2,
+      options2,
     );
 
     return {
@@ -174,7 +193,6 @@ export class AuthService {
 
   async validateToken(token: string) {
     try {
-      // @ts-ignore
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       const user = await prisma.users.findUnique({
         where: { id: decoded.id },

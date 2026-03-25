@@ -74,7 +74,7 @@ export class ProductController {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     
-    // Temporarily allow all products for debugging (similar to meters)
+    // Admins can view all products across organizations
     const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : req.user?.orgId;
     
     const filters = {
@@ -82,8 +82,8 @@ export class ProductController {
       search: req.query.search as string,
     };
 
-    const { products, total } = await productService.findAll(effectiveOrgId, page, limit, filters);
-    res.json(ApiResponse.paginated(products, page, limit, total));
+    const result = await productService.findAll(effectiveOrgId, page, limit, filters);
+    res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 
   /**

@@ -126,16 +126,10 @@ export class MeterController {
       aggregation: req.query.aggregation as string,
     };
 
-    console.log('Meter getAll - User orgId:', req.user!.orgId);
-    console.log('Meter getAll - User roles:', req.user!.roles);
-    console.log('Meter getAll - Filters:', filters);
-
-    // Temporarily allow all meters for debugging
+    // Admins can view all meters across organizations
     const orgId = req.user!.roles?.includes('admin') ? undefined : req.user!.orgId;
-    console.log('Meter getAll - Using orgId:', orgId);
 
     const result = await meterService.findAll(orgId, page, limit, filters);
-    console.log('Meter getAll - Result:', result);
     
     res.json(ApiResponse.success(result, 'Meters retrieved successfully'));
   });

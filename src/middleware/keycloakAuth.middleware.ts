@@ -181,6 +181,7 @@ export interface KeycloakUser {
  */
 export interface AuthRequest extends Request {
   user?: KeycloakUser;
+  orgId?: string; // Extracted organization ID for easy access
 }
 
 /**
