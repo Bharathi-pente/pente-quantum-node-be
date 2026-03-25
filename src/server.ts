@@ -4,16 +4,17 @@ import prisma from './config/database';
 import { dunningSchedulerService } from './services/dunning.scheduler.service';
 
 // Port
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for Docker/EC2
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, HOST, () => {
   logger.info(`
   ╔═══════════════════════════════════════════════════════════╗
   ║                                                           ║
   ║   QuantumBilling API Server                              ║
   ║   Environment: ${process.env.NODE_ENV?.padEnd(42) || 'development'.padEnd(42)}║
-  ║   Server: http://localhost:${PORT.toString().padEnd(31)}║
+  ║   Server: http://${HOST}:${PORT.toString().padEnd(31)}║
   ║   API Docs: http://localhost:${PORT}/api-docs${' '.repeat(19)}║
   ║   Health Check: http://localhost:${PORT}/api/v1/health${' '.repeat(11)}║
   ║                                                           ║
