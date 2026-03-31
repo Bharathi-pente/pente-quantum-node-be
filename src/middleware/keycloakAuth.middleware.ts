@@ -39,7 +39,7 @@ import { jwtVerify, JWTPayload, createLocalJWKSet } from 'jose';
 import ApiError from '../utils/ApiError';
 
 // Environment variables
-const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://localhost:8080';
+const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://3.80.172.5:8080';
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || 'quantum-billing';
 
 // Construct JWKS URL
@@ -272,7 +272,12 @@ export const authenticateKeycloak = async (
     };
 
     // Allow admin users to override organization via header
-    if (roles.includes('admin') || roles.includes('QuantumBill Admin')) {
+    // Check for both Keycloak role name (quantumbill_admin) and app role name
+    if (
+      roles.includes('quantumbill_admin') || 
+      roles.includes('admin') || 
+      roles.includes('QuantumBill Admin')
+    ) {
       const overrideOrgId = req.headers['x-organization-id'] as string;
       if (overrideOrgId) {
         req.user.orgId = overrideOrgId;
@@ -323,7 +328,42 @@ export const requireRole = (...roles: string[]) => {
     }
 
     const userRoles = req.user.roles;
-    const hasRequiredRole = roles.some(role => userRoles.includes(role));
+    
+    // Normalize role names to support multiple formats
+    // 'admin' should match 'quantumbill_admin', 'admin', or 'QuantumBill Admin'
+    const hasRequiredRole = roles.some(requiredRole => {
+      return userRoles.some(userRole => {
+        // Direct match (case-insensitive)
+        if (userRole.toLowerCase() === requiredRole.toLowerCase()) {
+          return true;
+        }
+        
+        // Handle admin role aliases
+        if (requiredRole === 'admin' || requiredRole.toLowerCase() === 'admin') {
+          return (
+            userRole.toLowerCase() === 'quantumbill_admin' ||
+            userRole.toLowerCase() === 'admin' ||
+            userRole === 'QuantumBill Admin'
+          );
+        }
+        
+        if (requiredRole === 'quantumbill_admin') {
+          return (
+            userRole.toLowerCase() === 'admin' ||
+            userRole === 'QuantumBill Admin'
+          );
+        }
+        
+        if (requiredRole === 'QuantumBill Admin') {
+          return (
+            userRole.toLowerCase() === 'admin' ||
+            userRole.toLowerCase() === 'quantumbill_admin'
+          );
+        }
+        
+        return false;
+      });
+    });
 
     if (!hasRequiredRole) {
       next(

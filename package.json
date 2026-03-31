@@ -20,6 +20,7 @@
     "prisma:introspect": "prisma db pull",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "prisma db seed",
     "db:check": "node check-db.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
@@ -99,5 +100,8 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }
