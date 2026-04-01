@@ -24,7 +24,15 @@ router.get('/', async (req: AuthRequest, res) => {
       auto_delete,
     } = req.query;
 
-    const result = await dataRetentionService.getPolicies(req.user!.orgId, {
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'orgId query parameter or x-org-id header is required'
+      });
+    }
+
+    const result = await dataRetentionService.getPolicies(orgId, {
       cursor: cursor as string,
       limit: parseInt(limit as string),
       sortField: sort_field as string,
@@ -40,12 +48,14 @@ router.get('/', async (req: AuthRequest, res) => {
       pageInfo: result.pageInfo,
       message: 'Data retention policies retrieved successfully'
     });
+    return;
   } catch (error) {
     console.error('Error fetching data retention policies:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve data retention policies'
     });
+    return;
   }
 });
 
@@ -56,19 +66,29 @@ router.get('/', async (req: AuthRequest, res) => {
  */
 router.get('/stats', async (req: AuthRequest, res) => {
   try {
-    const stats = await dataRetentionService.getStats(req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'orgId query parameter or x-org-id header is required'
+      });
+    }
+
+    const stats = await dataRetentionService.getStats(orgId);
 
     res.json({
       success: true,
       data: stats,
       message: 'Data retention statistics retrieved successfully'
     });
+    return;
   } catch (error) {
     console.error('Error fetching data retention stats:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve data retention statistics'
     });
+    return;
   }
 });
 
@@ -96,8 +116,24 @@ router.post('/', async (req: AuthRequest, res) => {
       });
     }
 
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'org_id in body or x-org-id header is required'
+      });
+    }
+
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const policy = await dataRetentionService.createPolicy(
-      req.user!.orgId,
+      orgId,
       {
         name,
         description,
@@ -107,7 +143,7 @@ router.post('/', async (req: AuthRequest, res) => {
         autoDelete: autoDelete || false,
         reviewFrequencyMonths,
       },
-      req.user!.id
+      userId
     );
 
     return res.status(201).json({
@@ -202,9 +238,25 @@ router.post('/cleanup', async (req: AuthRequest, res) => {
   try {
     const { dryRun = true } = req.body;
 
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'org_id in body or x-org-id header is required'
+      });
+    }
+
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const result = await dataRetentionService.executeDataCleanup(
-      req.user!.orgId,
-      req.user!.id,
+      orgId,
+      userId,
       dryRun
     );
 

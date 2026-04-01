@@ -29,9 +29,14 @@ export class UsageLimitOverrideController {
    *       - bearerAuth: []
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
     const limitOverride = await usageLimitService.createOverride(
       req.body, 
-      req.user!.orgId
+      orgId
     );
     
     res.status(201).json(
@@ -60,8 +65,14 @@ export class UsageLimitOverrideController {
       active_only: req.query.active_only === 'false' ? false : true,
     };
 
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
     const result = await usageLimitService.findAllOverrides(
-      req.user!.orgId, 
+      orgId, 
       page, 
       limit, 
       filters
@@ -85,9 +96,14 @@ export class UsageLimitOverrideController {
    *       - bearerAuth: []
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const limitOverride = await usageLimitService.findOverrideById(
       req.params.id, 
-      req.user!.orgId
+      orgId
     );
     
     res.json(
@@ -108,10 +124,15 @@ export class UsageLimitOverrideController {
    *       - bearerAuth: []
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
     const limitOverride = await usageLimitService.updateOverride(
       req.params.id, 
       req.body, 
-      req.user!.orgId
+      orgId
     );
     
     res.json(
@@ -132,7 +153,12 @@ export class UsageLimitOverrideController {
    *       - bearerAuth: []
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await usageLimitService.deleteOverride(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await usageLimitService.deleteOverride(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Limit override deleted successfully'));
   });
 }

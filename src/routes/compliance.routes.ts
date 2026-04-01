@@ -24,7 +24,15 @@ router.get('/', async (req: AuthRequest, res) => {
       date_to,
     } = req.query;
 
-    const result = await complianceService.getReports(req.user!.orgId, {
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'orgId query parameter or x-org-id header is required'
+      });
+    }
+
+    const result = await complianceService.getReports(orgId, {
       cursor: cursor as string,
       limit: parseInt(limit as string),
       sortField: sort_field as string,
@@ -41,12 +49,14 @@ router.get('/', async (req: AuthRequest, res) => {
       pageInfo: result.pageInfo,
       message: 'Compliance reports retrieved successfully'
     });
+    return;
   } catch (error) {
     console.error('Error fetching compliance reports:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve compliance reports'
     });
+    return;
   }
 });
 
@@ -57,19 +67,29 @@ router.get('/', async (req: AuthRequest, res) => {
  */
 router.get('/stats', async (req: AuthRequest, res) => {
   try {
-    const stats = await complianceService.getStats(req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'orgId query parameter or x-org-id header is required'
+      });
+    }
+
+    const stats = await complianceService.getStats(orgId);
 
     res.json({
       success: true,
       data: stats,
       message: 'Compliance statistics retrieved successfully'
     });
+    return;
   } catch (error) {
     console.error('Error fetching compliance stats:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve compliance statistics'
     });
+    return;
   }
 });
 
@@ -89,12 +109,28 @@ router.post('/', async (req: AuthRequest, res) => {
       });
     }
 
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'org_id in body or x-org-id header is required'
+      });
+    }
+
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const report = await complianceService.generateReport(
-      req.user!.orgId,
+      orgId,
       framework,
       new Date(period_start),
       new Date(period_end),
-      req.user!.id
+      userId
     );
 
     return res.status(201).json({
@@ -120,10 +156,18 @@ router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, findings, download_url } = req.body;
 
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const report = await complianceService.updateReport(
       req.params.id,
       { status, findings, downloadUrl: download_url },
-      req.user!.id
+      userId
     );
 
     res.json({
@@ -131,12 +175,14 @@ router.put('/:id', async (req: AuthRequest, res) => {
       data: report,
       message: 'Compliance report updated successfully'
     });
+    return;
   } catch (error) {
     console.error('Error updating compliance report:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update compliance report'
     });
+    return;
   }
 });
 

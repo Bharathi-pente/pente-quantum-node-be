@@ -35,8 +35,14 @@ export class UsageLimitTrackingController {
       meter_id: req.query.meter_id as string,
     };
 
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
     const usageData = await usageLimitService.getCurrentUsage(
-      req.user!.orgId, 
+      orgId, 
       filters
     );
     
@@ -58,9 +64,14 @@ export class UsageLimitTrackingController {
    *       - bearerAuth: []
    */
   getLimitUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const usageData = await usageLimitService.getLimitCurrentUsage(
       req.params.id, 
-      req.user!.orgId
+      orgId
     );
     
     res.json(
@@ -87,8 +98,14 @@ export class UsageLimitTrackingController {
       period: req.query.period as string || 'monthly',
     };
 
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
     const stats = await usageLimitService.getUsageStats(
-      req.user!.orgId, 
+      orgId, 
       filters
     );
     

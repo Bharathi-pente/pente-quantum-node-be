@@ -41,7 +41,12 @@ export class UsageController {
    *         description: Meter or customer not found
    */
   createUsageEvent = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const event = await usageService.createUsageEvent(req.user!.orgId, req.body);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const event = await usageService.createUsageEvent(orgId, req.body);
     res.status(201).json(ApiResponse.success(serializeBigInt(event), 'Usage event created successfully'));
   });
 
@@ -94,7 +99,12 @@ export class UsageController {
    *         description: Unauthorized
    */
   bulkCreateUsageEvents = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = await usageService.bulkCreateUsageEvents(req.user!.orgId, req.body.events);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const result = await usageService.bulkCreateUsageEvents(orgId, req.body.events);
     res.status(201).json(ApiResponse.success(
       { count: result.count },
       `${result.count} usage events created successfully`
@@ -194,7 +204,13 @@ export class UsageController {
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
     };
 
-    const result = await usageService.getUsageEvents(req.user!.orgId, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const result = await usageService.getUsageEvents(orgId, filters);
     res.json(ApiResponse.success(serializeBigInt(result), 'Usage events retrieved successfully'));
   });
 
@@ -227,7 +243,12 @@ export class UsageController {
    *         description: Usage event not found
    */
   getUsageEventById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const event = await usageService.getUsageEventById(req.user!.orgId, req.params.id);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const event = await usageService.getUsageEventById(orgId, req.params.id);
     res.json(ApiResponse.success(serializeBigInt(event), 'Usage event retrieved successfully'));
   });
 
@@ -321,7 +342,13 @@ export class UsageController {
       aggregation: (req.query.aggregation as 'sum' | 'avg' | 'min' | 'max' | 'count') || 'sum',
     };
 
-    const result = await usageService.getUsageAggregation(req.user!.orgId, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const result = await usageService.getUsageAggregation(orgId, filters);
     res.json(ApiResponse.success(result, 'Aggregated usage data retrieved successfully'));
   });
 
@@ -458,7 +485,13 @@ export class UsageController {
       period: (req.query.period as 'hour' | 'day' | 'week' | 'month' | 'year') || 'month',
     };
 
-    const result = await usageService.getUsageStats(req.user!.orgId, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const result = await usageService.getUsageStats(orgId, filters);
     res.json(ApiResponse.success(result, 'Usage statistics retrieved successfully'));
   });
 
@@ -550,7 +583,13 @@ export class UsageController {
       granularity: (req.query.granularity as 'hour' | 'day' | 'week' | 'month') || 'day',
     };
 
-    const result = await usageService.getUsageTrends(req.user!.orgId, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const result = await usageService.getUsageTrends(orgId, filters);
     res.json(ApiResponse.success(result, 'Usage trends retrieved successfully'));
   });
 }

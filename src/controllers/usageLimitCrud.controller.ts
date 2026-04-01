@@ -6,7 +6,7 @@
  */
 
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import usageLimitService from '../services/usageLimit.service';
 import ApiResponse, { serializeBigInt } from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
@@ -29,7 +29,12 @@ export class UsageLimitCrudController {
    *       - bearerAuth: []
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const usageLimit = await usageLimitService.create(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const usageLimit = await usageLimitService.create(req.body, orgId);
     res.status(201).json(
       ApiResponse.success(
         serializeBigInt(usageLimit), 
@@ -59,8 +64,14 @@ export class UsageLimitCrudController {
       customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
     };
 
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
     const result = await usageLimitService.findAll(
-      req.user!.orgId, 
+      orgId, 
       page, 
       limit, 
       filters
@@ -84,9 +95,14 @@ export class UsageLimitCrudController {
    *       - bearerAuth: []
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const usageLimit = await usageLimitService.findById(
       req.params.id, 
-      req.user!.orgId
+      orgId
     );
     
     res.json(
@@ -107,10 +123,15 @@ export class UsageLimitCrudController {
    *       - bearerAuth: []
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
     const usageLimit = await usageLimitService.update(
       req.params.id, 
       req.body, 
-      req.user!.orgId
+      orgId
     );
     
     res.json(
@@ -131,7 +152,12 @@ export class UsageLimitCrudController {
    *       - bearerAuth: []
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await usageLimitService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await usageLimitService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Usage limit deleted successfully'));
   });
 }

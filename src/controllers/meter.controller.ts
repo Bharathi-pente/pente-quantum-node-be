@@ -65,7 +65,12 @@ export class MeterController {
    *         description: Meter created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const meter = await meterService.create(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const meter = await meterService.create(req.body, orgId);
     res.status(201).json(ApiResponse.success(meter, 'Meter created successfully'));
   });
 
@@ -126,8 +131,11 @@ export class MeterController {
       aggregation: req.query.aggregation as string,
     };
 
-    // Admins can view all meters across organizations
-    const orgId = req.user!.roles?.includes('admin') ? undefined : req.user!.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
 
     const result = await meterService.findAll(orgId, page, limit, filters);
     
@@ -218,7 +226,12 @@ export class MeterController {
    *         description: Meter details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const meter = await meterService.findById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const meter = await meterService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(meter, 'Meter retrieved successfully'));
   });
 
@@ -267,7 +280,12 @@ export class MeterController {
    *         description: Meter updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const meter = await meterService.update(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const meter = await meterService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(meter, 'Meter updated successfully'));
   });
 
@@ -292,7 +310,12 @@ export class MeterController {
    *         description: Meter deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await meterService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await meterService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Meter deleted successfully'));
   });
 
@@ -367,7 +390,12 @@ export class MeterController {
    */
   getRealtimeReadings = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { timeframe = '24h', granularity = 'hour' } = req.query;
-    const readings = await meterService.getRealtimeReadings(req.params.id, req.user!.orgId, timeframe as string, granularity as string);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const readings = await meterService.getRealtimeReadings(req.params.id, orgId, timeframe as string, granularity as string);
     res.json(ApiResponse.success(readings, 'Real-time meter readings retrieved successfully'));
   });
 
@@ -431,7 +459,12 @@ export class MeterController {
    */
   getRealtimeStats = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { event_type, timeframe = '24h' } = req.query;
-    const stats = await meterService.getRealtimeStats(req.user!.orgId, event_type as string, timeframe as string);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const stats = await meterService.getRealtimeStats(orgId, event_type as string, timeframe as string);
     res.json(ApiResponse.success(stats, 'Real-time meter statistics retrieved successfully'));
   });
 
@@ -509,7 +542,12 @@ export class MeterController {
    */
   getRealtimeEvents = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { limit = 50, since } = req.query;
-    const events = await meterService.getRealtimeEvents(req.params.id, req.user!.orgId, Number(limit), since as string);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const events = await meterService.getRealtimeEvents(req.params.id, orgId, Number(limit), since as string);
     res.json(ApiResponse.success(events, 'Real-time meter events retrieved successfully'));
   });
 
@@ -586,7 +624,12 @@ export class MeterController {
    */
   getPerformanceMetrics = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { timeframe = '24h' } = req.query;
-    const metrics = await meterService.getPerformanceMetrics(req.params.id, req.user!.orgId, timeframe as string);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const metrics = await meterService.getPerformanceMetrics(req.params.id, orgId, timeframe as string);
     res.json(ApiResponse.success(metrics, 'Meter performance metrics retrieved successfully'));
   });
 
@@ -663,7 +706,12 @@ export class MeterController {
    */
   getHealthMonitoring = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status, event_type } = req.query;
-    const healthData = await meterService.getHealthMonitoring(req.user!.orgId, status as string, event_type as string);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const healthData = await meterService.getHealthMonitoring(orgId, status as string, event_type as string);
     res.json(ApiResponse.success(healthData, 'Meter health monitoring data retrieved successfully'));
   });
 }

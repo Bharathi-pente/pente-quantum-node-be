@@ -56,7 +56,12 @@ export class OrgPaymentController {
    *         description: Organization payment created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgPayment = await orgPaymentService.create(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const orgPayment = await orgPaymentService.create(req.body, orgId);
     res.status(201).json(ApiResponse.success(orgPayment, 'Organization payment created successfully'));
   });
 
@@ -111,6 +116,11 @@ export class OrgPaymentController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters = {
       status: req.query.status as string,
       payment_method: req.query.payment_method as string,
@@ -118,7 +128,7 @@ export class OrgPaymentController {
       date_to: req.query.date_to as string,
     };
 
-    const result = await orgPaymentService.findAll(req.user!.orgId, page, limit, filters);
+    const result = await orgPaymentService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Organization payments retrieved successfully'));
   });
 
@@ -143,7 +153,12 @@ export class OrgPaymentController {
    *         description: Organization payment details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgPayment = await orgPaymentService.findById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const orgPayment = await orgPaymentService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(orgPayment, 'Organization payment retrieved successfully'));
   });
 
@@ -189,7 +204,12 @@ export class OrgPaymentController {
    *         description: Organization payment updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgPayment = await orgPaymentService.update(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const orgPayment = await orgPaymentService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(orgPayment, 'Organization payment updated successfully'));
   });
 
@@ -214,7 +234,12 @@ export class OrgPaymentController {
    *         description: Organization payment deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await orgPaymentService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await orgPaymentService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Organization payment deleted successfully'));
   });
 }

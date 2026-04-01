@@ -173,7 +173,12 @@ export class UsageLimitController {
    *         description: Usage limit details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const usageLimit = await usageLimitService.findById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const usageLimit = await usageLimitService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit retrieved successfully'));
   });
 
@@ -258,7 +263,12 @@ export class UsageLimitController {
    *         description: Usage limit deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await usageLimitService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await usageLimitService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Usage limit deleted successfully'));
   });
 
@@ -307,7 +317,12 @@ export class UsageLimitController {
    *         description: Limit override created successfully
    */
   createOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const limitOverride = await usageLimitService.createOverride(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const limitOverride = await usageLimitService.createOverride(req.body, orgId);
     res.status(201).json(ApiResponse.success(limitOverride, 'Limit override created successfully'));
   });
 
@@ -363,7 +378,13 @@ export class UsageLimitController {
       active_only: req.query.active_only === 'false' ? false : true,
     };
 
-    const result = await usageLimitService.findAllOverrides(req.user!.orgId, page, limit, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const result = await usageLimitService.findAllOverrides(orgId, page, limit, filters);
     res.json(ApiResponse.success(serializeBigInt(result), 'Limit overrides retrieved successfully'));
   });
 
@@ -388,7 +409,12 @@ export class UsageLimitController {
    *         description: Limit override details
    */
   getOverrideById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const limitOverride = await usageLimitService.findOverrideById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const limitOverride = await usageLimitService.findOverrideById(req.params.id, orgId);
     res.json(ApiResponse.success(limitOverride, 'Limit override retrieved successfully'));
   });
 
@@ -431,7 +457,12 @@ export class UsageLimitController {
    *         description: Limit override updated successfully
    */
   updateOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const limitOverride = await usageLimitService.updateOverride(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const limitOverride = await usageLimitService.updateOverride(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(limitOverride, 'Limit override updated successfully'));
   });
 
@@ -456,7 +487,12 @@ export class UsageLimitController {
    *         description: Limit override deleted successfully
    */
   deleteOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await usageLimitService.deleteOverride(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await usageLimitService.deleteOverride(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Limit override deleted successfully'));
   });
 
@@ -538,7 +574,13 @@ export class UsageLimitController {
   getCurrentUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page = 1, limit = 10, ...filters } = req.query as any;
 
-    const usageData = await usageLimitService.getCurrentUsage(req.user!.orgId, filters, { page, limit });
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const usageData = await usageLimitService.getCurrentUsage(orgId, filters, { page, limit });
     res.json(ApiResponse.success(usageData, 'Current usage data retrieved successfully'));
   });
 
@@ -601,7 +643,12 @@ export class UsageLimitController {
    *                   example: "Current usage for limit retrieved successfully"
    */
   getLimitCurrentUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const usageData = await usageLimitService.getLimitCurrentUsage(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const usageData = await usageLimitService.getLimitCurrentUsage(req.params.id, orgId);
     res.json(ApiResponse.success(usageData, 'Current usage for limit retrieved successfully'));
   });
 
@@ -684,7 +731,13 @@ export class UsageLimitController {
       period: req.query.period as string || 'monthly',
     };
 
-    const stats = await usageLimitService.getUsageStats(req.user!.orgId, filters);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+
+    const stats = await usageLimitService.getUsageStats(orgId, filters);
     res.json(ApiResponse.success(stats, 'Usage statistics retrieved successfully'));
   });
 }

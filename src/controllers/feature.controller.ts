@@ -49,7 +49,12 @@ export class FeatureController {
    *         description: Feature created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const feature = await featureService.create(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const feature = await featureService.create(req.body, orgId);
     res.status(201).json(ApiResponse.success(feature, 'Feature created successfully'));
   });
 
@@ -98,13 +103,18 @@ export class FeatureController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters = {
       search: req.query.search as string,
       status: req.query.status as string,
       category: req.query.category as string,
     };
 
-    const result = await featureService.findAll(req.user!.orgId, page, limit, filters);
+    const result = await featureService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Features retrieved successfully'));
   });
 
@@ -129,7 +139,12 @@ export class FeatureController {
    *         description: Feature details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const feature = await featureService.findById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const feature = await featureService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(feature, 'Feature retrieved successfully'));
   });
 
@@ -175,7 +190,12 @@ export class FeatureController {
    *         description: Feature updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const feature = await featureService.update(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const feature = await featureService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(feature, 'Feature updated successfully'));
   });
 
@@ -200,7 +220,12 @@ export class FeatureController {
    *         description: Feature deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await featureService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await featureService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Feature deleted successfully'));
   });
 }

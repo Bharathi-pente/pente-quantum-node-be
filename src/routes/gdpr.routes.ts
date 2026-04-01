@@ -91,6 +91,22 @@ router.post('/', async (req: AuthRequest, res) => {
       });
     }
 
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      return res.status(400).json({
+        success: false,
+        message: 'org_id in body or x-org-id header is required'
+      });
+    }
+
     const request = await gdprService.createRequest(
       customerId,
       {
@@ -98,8 +114,8 @@ router.post('/', async (req: AuthRequest, res) => {
         dataCategories,
         notes,
       },
-      req.user!.id,
-      req.user!.orgId
+      userId,
+      orgId
     );
 
     return res.status(201).json({
