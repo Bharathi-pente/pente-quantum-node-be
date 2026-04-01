@@ -79,7 +79,12 @@ export class InvoiceController {
    *         description: Invoice created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const invoice = await invoiceService.create(req.body, req.user!.orgId, req);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id is required'));
+      return;
+    }
+    const invoice = await invoiceService.create(req.body, orgId, req);
     res.status(201).json(ApiResponse.success(invoice, 'Invoice created successfully'));
   });
 
@@ -140,6 +145,11 @@ export class InvoiceController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters = {
       status: req.query.status as string,
       customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
@@ -148,7 +158,7 @@ export class InvoiceController {
       date_to: req.query.date_to as string,
     };
 
-    const result = await invoiceService.findAll(req.user!.orgId, page, limit, filters);
+    const result = await invoiceService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Invoices retrieved successfully'));
   });
 
@@ -173,7 +183,12 @@ export class InvoiceController {
    *         description: Invoice details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const invoice = await invoiceService.findById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const invoice = await invoiceService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(invoice, 'Invoice retrieved successfully'));
   });
 
@@ -236,7 +251,12 @@ export class InvoiceController {
    *         description: Invoice updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const invoice = await invoiceService.update(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const invoice = await invoiceService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(invoice, 'Invoice updated successfully'));
   });
 
@@ -261,7 +281,12 @@ export class InvoiceController {
    *         description: Invoice deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await invoiceService.delete(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    await invoiceService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Invoice deleted successfully'));
   });
 
@@ -399,6 +424,11 @@ export class InvoiceController {
   getByCustomer = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters = {
       status: req.query.status as string,
       invoice_number: req.query.invoice_number as string,
@@ -406,7 +436,7 @@ export class InvoiceController {
       date_to: req.query.date_to as string,
     };
 
-    const result = await invoiceService.findByCustomer(req.params.id, req.user!.orgId, page, limit, filters);
+    const result = await invoiceService.findByCustomer(req.params.id, orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Customer invoices retrieved successfully'));
   });
 }

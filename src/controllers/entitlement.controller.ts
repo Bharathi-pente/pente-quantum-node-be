@@ -53,7 +53,12 @@ export class EntitlementController {
    *         description: Entitlement grant created successfully
    */
   createGrant = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const grant = await entitlementService.createGrant(req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const grant = await entitlementService.createGrant(req.body, orgId);
     res.status(201).json(ApiResponse.success(grant, 'Entitlement grant created successfully'));
   });
 
@@ -103,13 +108,18 @@ export class EntitlementController {
   getAllGrants = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters = {
       customer_id: req.query.customer_id as string,
       feature_id: req.query.feature_id as string,
       status: req.query.status as string,
     };
 
-    const result = await entitlementService.findAllGrants(req.user!.orgId, page, limit, filters);
+    const result = await entitlementService.findAllGrants(orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Entitlement grants retrieved successfully'));
   });
 
@@ -134,7 +144,12 @@ export class EntitlementController {
    *         description: Entitlement grant details
    */
   getGrantById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const grant = await entitlementService.findGrantById(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const grant = await entitlementService.findGrantById(req.params.id, orgId);
     res.json(ApiResponse.success(grant, 'Entitlement grant retrieved successfully'));
   });
 
@@ -184,7 +199,12 @@ export class EntitlementController {
    *         description: Entitlement grant updated successfully
    */
   updateGrant = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const grant = await entitlementService.updateGrant(req.params.id, req.body, req.user!.orgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const grant = await entitlementService.updateGrant(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(grant, 'Entitlement grant updated successfully'));
   });
 
@@ -209,7 +229,12 @@ export class EntitlementController {
    *         description: Entitlement grant deleted successfully
    */
   deleteGrant = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = await entitlementService.deleteGrant(req.params.id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const result = await entitlementService.deleteGrant(req.params.id, orgId);
     res.json(ApiResponse.success(result, 'Entitlement grant deleted successfully'));
   });
 
@@ -242,7 +267,12 @@ export class EntitlementController {
    */
   checkEntitlement = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { customer_id, feature_id } = req.query as { customer_id: string; feature_id: string };
-    const result = await entitlementService.checkEntitlement(customer_id, feature_id, req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const result = await entitlementService.checkEntitlement(customer_id, feature_id, orgId);
     res.json(ApiResponse.success(result, 'Entitlement check completed'));
   });
 
@@ -259,7 +289,12 @@ export class EntitlementController {
    *         description: Plan features mapping
    */
   getPlanFeatures = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const planFeatures = await entitlementService.getPlanFeatures(req.user!.orgId);
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
+    const planFeatures = await entitlementService.getPlanFeatures(orgId);
     res.json(ApiResponse.success(planFeatures, 'Plan features retrieved successfully'));
   });
 }

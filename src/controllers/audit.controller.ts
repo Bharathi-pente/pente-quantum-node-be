@@ -100,7 +100,11 @@ export class AuditController {
    *                   $ref: '#/components/schemas/PaginationMeta'
    */
   getAuditLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.user!.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters: AuditLogFilter = req.query;
 
     const result = await auditService.getAuditLogs(orgId, filters);
@@ -140,7 +144,11 @@ export class AuditController {
    *         description: Audit log not found
    */
   getAuditLogById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.user!.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const { id } = req.params;
 
     const auditLog = await auditService.getAuditLogById(orgId, id);
@@ -205,7 +213,11 @@ export class AuditController {
    *                         type: object
    */
   getAuditStats = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.user!.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const { date_from, date_to } = req.query;
 
     const stats = await auditService.getAuditStats(orgId, date_from as string, date_to as string);
@@ -264,7 +276,11 @@ export class AuditController {
    *                 $ref: '#/components/schemas/AuditLog'
    */
   exportAuditLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.user!.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     const filters: AuditLogFilter = req.query;
 
     const auditLogs = await auditService.exportAuditLogs(orgId, filters);
