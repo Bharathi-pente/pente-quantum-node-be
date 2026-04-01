@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
-import { AuthRequest } from '../types/auth';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCustomerSchema,
