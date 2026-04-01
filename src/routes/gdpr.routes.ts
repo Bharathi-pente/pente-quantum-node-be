@@ -141,10 +141,18 @@ router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, notes } = req.body;
 
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const request = await gdprService.updateRequest(
       req.params.id,
       { status, notes },
-      req.user!.id
+      userId
     );
 
     res.json({
@@ -152,12 +160,14 @@ router.put('/:id', async (req: AuthRequest, res) => {
       data: request,
       message: 'GDPR request updated successfully'
     });
+    return;
   } catch (error) {
     console.error('Error updating GDPR request:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update GDPR request'
     });
+    return;
   }
 });
 
@@ -168,19 +178,29 @@ router.put('/:id', async (req: AuthRequest, res) => {
  */
 router.post('/:id/process', async (req: AuthRequest, res) => {
   try {
-    const result = await gdprService.processRequest(req.params.id, req.user!.id);
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
+    const result = await gdprService.processRequest(req.params.id, userId);
 
     res.json({
       success: true,
       data: result,
       message: 'GDPR request processed successfully'
     });
+    return;
   } catch (error) {
     console.error('Error processing GDPR request:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to process GDPR request'
     });
+    return;
   }
 });
 

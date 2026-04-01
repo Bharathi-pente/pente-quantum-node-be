@@ -68,9 +68,12 @@ export class UsageLimitController {
    *         description: Usage limit created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Admins can create usage limits for any organization, others use their own orgId
-    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : req.user?.orgId;
-    const usageLimit = await usageLimitService.create(req.body, effectiveOrgId);
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
+    const usageLimit = await usageLimitService.create(req.body, orgId);
     res.status(201).json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit created successfully'));
   });
 
@@ -132,9 +135,6 @@ export class UsageLimitController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.user?.orgId;
-    console.log('[UsageLimitController.getAll] orgId from user:', orgId);
-    console.log('[UsageLimitController.getAll] req.user:', req.user);
     
     const filters = {
       product_id: req.query.product_id as string,
@@ -145,10 +145,13 @@ export class UsageLimitController {
       customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
     };
 
-    // Admins can view all usage limits across organizations
-    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     
-    const result = await usageLimitService.findAll(effectiveOrgId, page, limit, filters);
+    const result = await usageLimitService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.success(serializeBigInt(result), 'Usage limits retrieved successfully'));
   });
 
@@ -231,13 +234,15 @@ export class UsageLimitController {
    *         description: Usage limit updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const effectiveOrgId = req.user!.roles?.includes('admin')
-      ? undefined
-      : req.user?.orgId;
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      return;
+    }
     const usageLimit = await usageLimitService.update(
       req.params.id,
       req.body,
-      effectiveOrgId,
+      orgId,
     );
     res.json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit updated successfully'));
   });

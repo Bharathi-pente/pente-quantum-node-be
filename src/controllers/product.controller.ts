@@ -74,15 +74,18 @@ export class ProductController {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     
-    // Admins can view all products across organizations
-    const effectiveOrgId = req.user!.roles?.includes('admin') ? undefined : req.user?.orgId;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      return;
+    }
     
     const filters = {
       status: req.query.status as string,
       search: req.query.search as string,
     };
 
-    const result = await productService.findAll(effectiveOrgId, page, limit, filters);
+    const result = await productService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 

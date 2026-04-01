@@ -176,6 +176,14 @@ router.put('/:id', async (req: AuthRequest, res) => {
       status,
     } = req.body;
 
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const policy = await dataRetentionService.updatePolicy(
       req.params.id,
       {
@@ -186,7 +194,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
         autoDelete,
         status,
       },
-      req.user!.id
+      userId
     );
 
     res.json({
@@ -194,12 +202,14 @@ router.put('/:id', async (req: AuthRequest, res) => {
       data: policy,
       message: 'Data retention policy updated successfully'
     });
+    return;
   } catch (error) {
     console.error('Error updating data retention policy:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update data retention policy'
     });
+    return;
   }
 });
 
@@ -210,9 +220,17 @@ router.put('/:id', async (req: AuthRequest, res) => {
  */
 router.post('/:id/review', async (req: AuthRequest, res) => {
   try {
+    const userId = req.body.user_id || req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'user_id in body or x-user-id header is required'
+      });
+    }
+
     const policy = await dataRetentionService.reviewPolicy(
       req.params.id,
-      req.user!.id
+      userId
     );
 
     return res.json({
