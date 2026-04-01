@@ -32,6 +32,7 @@ import gdprRoutes from './gdpr.routes';
 import complianceRoutes from './compliance.routes';
 import externalEventsRoutes from './externalEvents.routes';
 import apiKeyRoutes from './apiKey.routes';
+import keycloakAuthRoutes from './keycloakAuth.routes';
 
 const router = Router();
 
@@ -49,9 +50,9 @@ router.get('/health', (_req, res) => {
 });
 
 // Mount routes
-// Note: Authentication is now handled by Keycloak.
-// Old /auth routes (login, register) have been removed.
-// Users must authenticate through Keycloak instead.
+// Authentication routes powered by Keycloak
+router.use('/auth', keycloakAuthRoutes);
+
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);
 router.use('/roles', roleRoutes);
