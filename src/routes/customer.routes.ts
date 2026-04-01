@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCustomerSchema,
@@ -17,15 +17,7 @@ const router = Router();
  * @desc    Create customer
  * @access  Private
  */
-router.post(
-  '/',
-  authenticateKeycloak,
-  validate(createCustomerSchema),
-  customerController.create
-);
-
-// All routes require authentication
-router.use(authenticateKeycloak);
+router.post('/', validate(createCustomerSchema), customerController.create);
 
 /**
  * @route   GET /api/v1/customers
@@ -48,7 +40,6 @@ router.get('/:id', validate(getCustomerSchema), customerController.getById);
  */
 router.put(
   '/:id',
-  requireRole('admin'),
   validate(updateCustomerSchema),
   customerController.update
 );
@@ -58,12 +49,7 @@ router.put(
  * @desc    Delete customer
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  validate(getCustomerSchema),
-  customerController.delete
-);
+router.delete('/:id', validate(getCustomerSchema), customerController.delete);
 
 /**
  * @route   GET /api/v1/customers/:id/invoices

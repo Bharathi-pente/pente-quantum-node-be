@@ -1,4 +1,4 @@
-# External Events Integration Documentation
+## External Events Integration Documentation
 
 ## Overview
 Integrated an external events service API into the QuantumBilling backend to provide user events metrics. The integration follows a clean architecture with service layer, controller, and routes.
@@ -23,7 +23,7 @@ Integrated an external events service API into the QuantumBilling backend to pro
 
 ### 3. Routes (`externalEvents.routes.ts`)
 - **Location:** `backend/src/routes/externalEvents.routes.ts`
-- **Authentication:** All routes protected with Keycloak authentication
+- **Authentication:** All routes protected with Bearer token authentication
 - **Registered at:** `/api/v1/user/events`
 
 ## Environment Configuration
@@ -44,7 +44,7 @@ EXTERNAL_EVENTS_CUSTOMER_ID=org_acme
 GET /api/v1/user/events/:userId
 ```
 
-**Authentication:** Required (Keycloak Bearer Token)
+**Authentication:** Required (Bearer token)
 
 **Parameters:**
 - `userId` (path, required): User ID to fetch events for
@@ -54,7 +54,7 @@ GET /api/v1/user/events/:userId
 **Example Request:**
 ```bash
 curl -X GET "http://localhost:3000/api/v1/user/events/user_acme_01?limit=100&offset=0" \
-  -H "Authorization: Bearer YOUR_KEYCLOAK_TOKEN"
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Example Response:**
@@ -79,7 +79,7 @@ curl -X GET "http://localhost:3000/api/v1/user/events/user_acme_01?limit=100&off
 GET /api/v1/user/events/health
 ```
 
-**Authentication:** Required (Keycloak Bearer Token)
+**Authentication:** Required (Bearer token)
 
 **Example Response:**
 ```json
@@ -208,23 +208,19 @@ export const UserEventsMetrics: React.FC<Props> = ({ userId, accessToken }) => {
 
 ### Usage in Frontend Page
 
+Use your application's authentication provider to obtain an access token, then pass it to the component. Example:
+
 ```typescript
 // pages/UserEventsPage.tsx
 import React from 'react';
-import { useKeycloak } from '@react-keycloak/web';
 import { UserEventsMetrics } from '../components/UserEventsMetrics';
 
-export const UserEventsPage: React.FC = () => {
-  const { keycloak } = useKeycloak();
-  
-  // Get user ID from Keycloak token or your user context
-  const userId = keycloak.tokenParsed?.preferred_username || 'user_acme_01';
-
+export const UserEventsPage: React.FC<{ accessToken: string; userId: string }> = ({ accessToken, userId }) => {
   return (
     <div className="page-container">
       <UserEventsMetrics 
         userId={userId}
-        accessToken={keycloak.token!}
+        accessToken={accessToken}
       />
     </div>
   );
@@ -237,18 +233,18 @@ export const UserEventsPage: React.FC = () => {
 ```bash
 # Get user events
 curl -X GET "http://localhost:3000/api/v1/user/events/user_acme_01?limit=100&offset=0" \
-  -H "Authorization: Bearer YOUR_KEYCLOAK_TOKEN"
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 
 # Check service health
 curl -X GET "http://localhost:3000/api/v1/user/events/health" \
-  -H "Authorization: Bearer YOUR_KEYCLOAK_TOKEN"
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ### Using Postman
 1. Set method to GET
 2. URL: `http://localhost:3000/api/v1/user/events/user_acme_01`
 3. Add query params: `limit=100`, `offset=0`
-4. Add header: `Authorization: Bearer YOUR_KEYCLOAK_TOKEN`
+4. Add header: `Authorization: Bearer YOUR_ACCESS_TOKEN`
 
 ## Error Handling
 
@@ -257,7 +253,7 @@ The integration includes comprehensive error handling:
 1. **External API Errors:** Returns proper error messages from the external service
 2. **Network Errors:** Handles timeouts and connection issues
 3. **Validation Errors:** Validates userId, limit, and offset parameters
-4. **Authentication Errors:** Keycloak middleware ensures proper authentication
+4. **Authentication Errors:** Bearer token validation ensures proper authentication
 
 ## Files Created/Modified
 
@@ -280,7 +276,7 @@ The integration includes comprehensive error handling:
 1. **No Impact on Existing Code:** This integration is completely isolated and doesn't affect any existing functionality
 2. **Scalable:** Easy to add more endpoints from the external service
 3. **Configurable:** All external service details controlled via environment variables
-4. **Secure:** All routes protected with Keycloak authentication
+4. **Secure:** All routes protected with Bearer token authentication
 5. **Production Ready:** Includes logging, error handling, and proper TypeScript types
 
 ## Future Enhancements

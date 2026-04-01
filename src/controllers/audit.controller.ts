@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import { AuditService } from '../services/audit.service';
 import { AuditLogFilter } from '../types';
 import ApiResponse from '../utils/ApiResponse';

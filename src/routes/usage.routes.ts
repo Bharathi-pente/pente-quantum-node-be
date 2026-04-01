@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import usageController from '../controllers/usage.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createUsageEventSchema,
@@ -13,8 +13,7 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @swagger

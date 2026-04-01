@@ -1,11 +1,9 @@
 import { Router } from 'express';
 import apiKeyController from '../controllers/apiKey.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
-// All routes require Keycloak authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/user/apikeys

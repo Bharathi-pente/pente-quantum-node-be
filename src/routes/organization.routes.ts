@@ -3,7 +3,6 @@ import organizationController from '../controllers/organization.controller';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
 import { AlertsController } from '../controllers/alerts.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createOrganizationSchema,
@@ -26,15 +25,9 @@ const alertsController = new AlertsController();
  * @desc    Create organization
  * @access  Private
  */
-router.post(
-  '/',
-  authenticateKeycloak,
-  validate(createOrganizationSchema),
-  organizationController.create
-);
+router.post('/', validate(createOrganizationSchema), organizationController.create);
 
-// All other routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/organizations
@@ -55,12 +48,7 @@ router.get('/:id', validate(getOrganizationSchema), organizationController.getBy
  * @desc    Update organization
  * @access  Private (admin)
  */
-router.put(
-  '/:id',
-  requireRole('admin'),
-  validate(updateOrganizationSchema),
-  organizationController.update
-);
+router.put('/:id', validate(updateOrganizationSchema), organizationController.update);
 
 /**
  * @route   GET /api/v1/organizations/:id/dashboard
@@ -78,12 +66,7 @@ router.get(
  * @desc    Delete organization
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  validate(getOrganizationSchema),
-  organizationController.delete
-);
+router.delete('/:id', validate(getOrganizationSchema), organizationController.delete);
 
 /**
  * @route   GET /api/v1/organizations/:id/invoices

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import orgPaymentMethodController from '../controllers/orgPaymentMethod.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createOrgPaymentMethodSchema,
@@ -39,7 +39,7 @@ const router = Router();
  *       403:
  *         description: Forbidden
  */
-router.post('/', authenticateKeycloak, validate(createOrgPaymentMethodSchema), orgPaymentMethodController.create);
+router.post('/', validate(createOrgPaymentMethodSchema), orgPaymentMethodController.create);
 
 /**
  * @swagger
@@ -100,7 +100,7 @@ router.post('/', authenticateKeycloak, validate(createOrgPaymentMethodSchema), o
  *                     pagination:
  *                       $ref: '#/components/schemas/Pagination'
  */
-router.get('/', authenticateKeycloak, validate(getOrgPaymentMethodsQuerySchema), orgPaymentMethodController.getAll);
+router.get('/', validate(getOrgPaymentMethodsQuerySchema), orgPaymentMethodController.getAll);
 
 /**
  * @swagger
@@ -128,7 +128,7 @@ router.get('/', authenticateKeycloak, validate(getOrgPaymentMethodsQuerySchema),
  *       404:
  *         description: Payment method not found
  */
-router.get('/:id', authenticateKeycloak, validate(getOrgPaymentMethodSchema), orgPaymentMethodController.getById);
+router.get('/:id', validate(getOrgPaymentMethodSchema), orgPaymentMethodController.getById);
 
 /**
  * @swagger
@@ -162,7 +162,7 @@ router.get('/:id', authenticateKeycloak, validate(getOrgPaymentMethodSchema), or
  *       404:
  *         description: Payment method not found
  */
-router.put('/:id', authenticateKeycloak, validate(updateOrgPaymentMethodSchema), orgPaymentMethodController.update);
+router.put('/:id', validate(updateOrgPaymentMethodSchema), orgPaymentMethodController.update);
 
 /**
  * @swagger
@@ -188,6 +188,6 @@ router.put('/:id', authenticateKeycloak, validate(updateOrgPaymentMethodSchema),
  *       409:
  *         description: Cannot delete payment method in use
  */
-router.delete('/:id', authenticateKeycloak, validate(getOrgPaymentMethodSchema), orgPaymentMethodController.delete);
+router.delete('/:id', validate(getOrgPaymentMethodSchema), orgPaymentMethodController.delete);
 
 export default router;

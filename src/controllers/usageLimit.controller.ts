@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import usageLimitService from '../services/usageLimit.service';
 import ApiResponse, { serializeBigInt } from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';

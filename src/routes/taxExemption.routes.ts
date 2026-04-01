@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TaxExemptionController } from '../controllers/taxExemption.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createTaxExemptionSchema,
@@ -12,8 +12,7 @@ import {
 
 const router = Router();
 
-// All tax exemption routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @swagger

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import emailTemplateService from '../services/email-template.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';

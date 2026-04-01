@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TaxRegionController } from '../controllers/taxRegion.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createTaxRegionSchema,
@@ -12,8 +12,7 @@ import {
 
 const router = Router();
 
-// All tax region routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @swagger

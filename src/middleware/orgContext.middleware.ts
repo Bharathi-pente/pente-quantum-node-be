@@ -13,7 +13,7 @@
 
 import { Response, NextFunction } from 'express';
 import ApiError from '../utils/ApiError';
-import type { AuthRequest } from './keycloakAuth.middleware';
+import type { AuthRequest } from '../types/auth';
 
 /**
  * Middleware that requires organization context from authenticated user

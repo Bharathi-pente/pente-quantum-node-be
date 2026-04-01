@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import usageLimitController from '../controllers/usageLimit.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createUsageLimitSchema,
@@ -49,7 +49,7 @@ const router = Router();
  *       409:
  *         description: Usage limit already exists for this combination
  */
-router.post('/', authenticateKeycloak, validate(createUsageLimitSchema), usageLimitController.create);
+router.post('/', validate(createUsageLimitSchema), usageLimitController.create);
 
 /**
  * @swagger
@@ -139,7 +139,7 @@ router.post('/', authenticateKeycloak, validate(createUsageLimitSchema), usageLi
  *       403:
  *         description: Forbidden
  */
-router.get('/', authenticateKeycloak, validate(getUsageLimitsQuerySchema), usageLimitController.getAll);
+router.get('/', validate(getUsageLimitsQuerySchema), usageLimitController.getAll);
 
 /**
  * @swagger
@@ -171,7 +171,7 @@ router.get('/', authenticateKeycloak, validate(getUsageLimitsQuerySchema), usage
  *       404:
  *         description: Usage limit not found
  */
-router.get('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, validate(getUsageLimitSchema), usageLimitController.getById);
+router.get('/:id([0-9a-fA-F-]{36})', validate(getUsageLimitSchema), usageLimitController.getById);
 
 /**
  * @swagger
@@ -211,7 +211,7 @@ router.get('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, validate(getUsageLimi
  *       404:
  *         description: Usage limit not found
  */
-router.put('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, validate(updateUsageLimitSchema), usageLimitController.update);
+router.put('/:id([0-9a-fA-F-]{36})', validate(updateUsageLimitSchema), usageLimitController.update);
 
 /**
  * @swagger
@@ -252,7 +252,7 @@ router.put('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, validate(updateUsageL
  *       404:
  *         description: Usage limit not found
  */
-router.delete('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, usageLimitController.delete);
+router.delete('/:id([0-9a-fA-F-]{36})', usageLimitController.delete);
 
 // Limit Overrides Routes
 /**
@@ -285,7 +285,7 @@ router.delete('/:id([0-9a-fA-F-]{36})', authenticateKeycloak, usageLimitControll
  *       404:
  *         description: Customer or meter not found
  */
-router.post('/overrides', authenticateKeycloak, validate(createLimitOverrideSchema), usageLimitController.createOverride);
+router.post('/overrides', validate(createLimitOverrideSchema), usageLimitController.createOverride);
 
 /**
  * @swagger
@@ -363,7 +363,7 @@ router.post('/overrides', authenticateKeycloak, validate(createLimitOverrideSche
  *       403:
  *         description: Forbidden
  */
-router.get('/overrides', authenticateKeycloak, validate(getLimitOverridesQuerySchema), usageLimitController.getAllOverrides);
+router.get('/overrides', validate(getLimitOverridesQuerySchema), usageLimitController.getAllOverrides);
 
 /**
  * @swagger
@@ -395,7 +395,7 @@ router.get('/overrides', authenticateKeycloak, validate(getLimitOverridesQuerySc
  *       404:
  *         description: Limit override not found
  */
-router.get('/overrides/:id', authenticateKeycloak, validate(getLimitOverrideSchema), usageLimitController.getOverrideById);
+router.get('/overrides/:id', validate(getLimitOverrideSchema), usageLimitController.getOverrideById);
 
 /**
  * @swagger
@@ -435,7 +435,7 @@ router.get('/overrides/:id', authenticateKeycloak, validate(getLimitOverrideSche
  *       404:
  *         description: Limit override not found
  */
-router.put('/overrides/:id', authenticateKeycloak, validate(updateLimitOverrideSchema), usageLimitController.updateOverride);
+router.put('/overrides/:id', validate(updateLimitOverrideSchema), usageLimitController.updateOverride);
 
 /**
  * @swagger
@@ -476,7 +476,7 @@ router.put('/overrides/:id', authenticateKeycloak, validate(updateLimitOverrideS
  *       404:
  *         description: Limit override not found
  */
-router.delete('/overrides/:id', authenticateKeycloak, usageLimitController.deleteOverride);
+router.delete('/overrides/:id', usageLimitController.deleteOverride);
 
 /**
  * @swagger
@@ -513,7 +513,7 @@ router.delete('/overrides/:id', authenticateKeycloak, usageLimitController.delet
  *       403:
  *         description: Forbidden
  */
-router.get('/current-usage', authenticateKeycloak, validate(getCurrentUsageQuerySchema), usageLimitController.getCurrentUsage);
+router.get('/current-usage', validate(getCurrentUsageQuerySchema), usageLimitController.getCurrentUsage);
 
 /**
  * @swagger
@@ -541,7 +541,7 @@ router.get('/current-usage', authenticateKeycloak, validate(getCurrentUsageQuery
  *       404:
  *         description: Usage limit not found
  */
-router.get('/:id([0-9a-fA-F-]{36})/current-usage', authenticateKeycloak, validate(getUsageLimitSchema), usageLimitController.getLimitCurrentUsage);
+router.get('/:id([0-9a-fA-F-]{36})/current-usage', validate(getUsageLimitSchema), usageLimitController.getLimitCurrentUsage);
 
 /**
  * @swagger
@@ -579,6 +579,6 @@ router.get('/:id([0-9a-fA-F-]{36})/current-usage', authenticateKeycloak, validat
  *       403:
  *         description: Forbidden
  */
-router.get('/usage-stats', authenticateKeycloak, validate(getUsageStatsQuerySchema), usageLimitController.getUsageStats);
+router.get('/usage-stats', validate(getUsageStatsQuerySchema), usageLimitController.getUsageStats);
 
 export default router;

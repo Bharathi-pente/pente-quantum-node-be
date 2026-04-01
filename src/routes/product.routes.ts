@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import productController from '../controllers/product.controller';
 import rateLimitController from '../controllers/rateLimit.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createProductSchema,
@@ -17,15 +16,9 @@ const router = Router();
  * @desc    Create product
  * @access  Private
  */
-router.post(
-  '/',
-  authenticateKeycloak,
-  validate(createProductSchema),
-  productController.create
-);
+router.post('/', validate(createProductSchema), productController.create);
 
-// All other routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/products
@@ -46,38 +39,27 @@ router.get('/:id', validate(getProductSchema), productController.getById);
  * @desc    Update product
  * @access  Private (admin)
  */
-router.put(
-  '/:id',
-  requireRole('admin'),
-  validate(updateProductSchema),
-  productController.update
-);
+router.put('/:id', validate(updateProductSchema), productController.update);
 
 /**
  * @route   DELETE /api/v1/products/:id
  * @desc    Delete product
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  validate(getProductSchema),
-  productController.delete
-);
+router.delete('/:id', validate(getProductSchema), productController.delete);
 
 /**
  * @route   POST /api/v1/products/:id/features/:featureId
  * @desc    Add feature to product
  * @access  Private (admin)
  */
-router.post('/:id/features/:featureId', requireRole('admin'), productController.addFeature);
-
+router.post('/:id/features/:featureId', productController.addFeature);
 /**
  * @route   DELETE /api/v1/products/:id/features/:featureId
  * @desc    Remove feature from product
  * @access  Private (admin)
  */
-router.delete('/:id/features/:featureId', requireRole('admin'), productController.removeFeature);
+router.delete('/:id/features/:featureId', productController.removeFeature);
 
 /**
  * @route   GET /api/v1/products/:productId/rate-limit-policies

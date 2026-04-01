@@ -1,11 +1,9 @@
 import { Router } from 'express';
 import emailTemplateController from '../controllers/email-template.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/email-templates
@@ -26,33 +24,21 @@ router.get('/:id', emailTemplateController.getTemplateById);
  * @desc    Create email template
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/',
-  requireRole('admin', 'finance'),
-  emailTemplateController.createTemplate
-);
+router.post('/', emailTemplateController.createTemplate);
 
 /**
  * @route   PUT /api/v1/email-templates/:id
  * @desc    Update email template
  * @access  Private (Admin/Finance)
  */
-router.put(
-  '/:id',
-  requireRole('admin', 'finance'),
-  emailTemplateController.updateTemplate
-);
+router.put('/:id', emailTemplateController.updateTemplate);
 
 /**
  * @route   DELETE /api/v1/email-templates/:id
  * @desc    Delete email template
  * @access  Private (Admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  emailTemplateController.deleteTemplate
-);
+router.delete('/:id', emailTemplateController.deleteTemplate);
 
 /**
  * @route   POST /api/v1/email-templates/:id/preview

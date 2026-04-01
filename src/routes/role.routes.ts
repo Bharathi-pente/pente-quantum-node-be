@@ -1,6 +1,5 @@
 import express from 'express';
 import roleController from '../controllers/role.controller';
-import { requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { createRoleSchema, updateRoleSchema } from '../validators/role.validator';
 
@@ -18,7 +17,7 @@ const router = express.Router();
  * @desc    Create a new role
  * @access  Private (admin)
  */
-router.post('/', requireRole('admin'), validate(createRoleSchema), roleController.create);
+router.post('/', validate(createRoleSchema), roleController.create);
 
 /**
  * @route   GET /api/v1/roles
@@ -46,13 +45,13 @@ router.get('/:id', roleController.getById);
  * @desc    Update role
  * @access  Private (admin)
  */
-router.put('/:id', requireRole('admin'), validate(updateRoleSchema), roleController.update);
+router.put('/:id', validate(updateRoleSchema), roleController.update);
 
 /**
  * @route   DELETE /api/v1/roles/:id
  * @desc    Delete role
  * @access  Private (admin)
  */
-router.delete('/:id', requireRole('admin'), roleController.delete);
+router.delete('/:id', roleController.delete);
 
 export default router;

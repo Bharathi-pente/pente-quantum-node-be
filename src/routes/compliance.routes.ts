@@ -1,12 +1,10 @@
 import { Router } from 'express';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import { complianceService } from '../services/compliance.service';
 
 const router = Router();
 
-// All compliance routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak auth removed — routes are now unprotected by Keycloak
 
 /**
  * @route   GET /api/compliance-reports
@@ -80,7 +78,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
  * @desc    Generate compliance report
  * @access  Private (admin only)
  */
-router.post('/', requireRole('admin'), async (req: AuthRequest, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     const { framework, period_start, period_end } = req.body;
 
@@ -118,7 +116,7 @@ router.post('/', requireRole('admin'), async (req: AuthRequest, res) => {
  * @desc    Update compliance report
  * @access  Private (admin only)
  */
-router.put('/:id', requireRole('admin'), async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, findings, download_url } = req.body;
 

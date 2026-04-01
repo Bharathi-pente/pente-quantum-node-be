@@ -1,12 +1,10 @@
 import { Router } from 'express';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import { gdprService } from '../services/gdpr.service';
 
 const router = Router();
 
-// All GDPR routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/gdpr-requests
@@ -123,7 +121,7 @@ router.post('/', async (req: AuthRequest, res) => {
  * @desc    Update GDPR request status
  * @access  Private (admin only)
  */
-router.put('/:id', requireRole('admin'), async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, notes } = req.body;
 
@@ -152,7 +150,7 @@ router.put('/:id', requireRole('admin'), async (req: AuthRequest, res) => {
  * @desc    Process GDPR request
  * @access  Private (admin only)
  */
-router.post('/:id/process', requireRole('admin'), async (req: AuthRequest, res) => {
+router.post('/:id/process', async (req: AuthRequest, res) => {
   try {
     const result = await gdprService.processRequest(req.params.id, req.user!.id);
 
@@ -175,7 +173,7 @@ router.post('/:id/process', requireRole('admin'), async (req: AuthRequest, res) 
  * @desc    Get overdue GDPR requests
  * @access  Private (admin only)
  */
-router.get('/overdue', requireRole('admin'), async (_req: AuthRequest, res) => {
+router.get('/overdue', async (_req: AuthRequest, res) => {
   try {
     const requests = await gdprService.getOverdueRequests();
 

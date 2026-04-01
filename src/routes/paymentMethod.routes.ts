@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { PaymentMethodController } from '../controllers/paymentMethod.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createPaymentMethodSchema,
@@ -40,7 +40,7 @@ const paymentMethodController = new PaymentMethodController();
  *       404:
  *         description: Customer not found
  */
-router.post('/', authenticateKeycloak, validate(createPaymentMethodSchema), paymentMethodController.create);
+router.post('/', validate(createPaymentMethodSchema), paymentMethodController.create);
 
 /**
  * @swagger
@@ -98,7 +98,7 @@ router.post('/', authenticateKeycloak, validate(createPaymentMethodSchema), paym
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authenticateKeycloak, validate(getPaymentMethodsQuerySchema), paymentMethodController.getAll);
+router.get('/', validate(getPaymentMethodsQuerySchema), paymentMethodController.getAll);
 
 /**
  * @swagger
@@ -128,7 +128,7 @@ router.get('/', authenticateKeycloak, validate(getPaymentMethodsQuerySchema), pa
  *       404:
  *         description: Payment method not found
  */
-router.get('/:id', authenticateKeycloak, validate(getPaymentMethodSchema), paymentMethodController.getById);
+router.get('/:id', validate(getPaymentMethodSchema), paymentMethodController.getById);
 
 /**
  * @swagger
@@ -166,7 +166,7 @@ router.get('/:id', authenticateKeycloak, validate(getPaymentMethodSchema), payme
  *       404:
  *         description: Payment method not found
  */
-router.put('/:id', authenticateKeycloak, validate(updatePaymentMethodSchema), paymentMethodController.update);
+router.put('/:id', validate(updatePaymentMethodSchema), paymentMethodController.update);
 
 /**
  * @swagger
@@ -205,7 +205,7 @@ router.put('/:id', authenticateKeycloak, validate(updatePaymentMethodSchema), pa
  *       404:
  *         description: Payment method not found
  */
-router.delete('/:id', authenticateKeycloak, validate(getPaymentMethodSchema), paymentMethodController.delete);
+router.delete('/:id', validate(getPaymentMethodSchema), paymentMethodController.delete);
 
 /**
  * @swagger
@@ -235,6 +235,6 @@ router.delete('/:id', authenticateKeycloak, validate(getPaymentMethodSchema), pa
  *       404:
  *         description: Payment method not found
  */
-router.post('/:id/default', authenticateKeycloak, validate(getPaymentMethodSchema), paymentMethodController.setDefault);
+router.post('/:id/default', validate(getPaymentMethodSchema), paymentMethodController.setDefault);
 
 export default router;

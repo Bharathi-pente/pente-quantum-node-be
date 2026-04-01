@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
 import externalEventsService from '../services/externalEvents.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
+import { AuthRequest } from '../types/auth';
 
 /**
  * @swagger

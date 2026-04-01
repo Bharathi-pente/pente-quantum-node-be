@@ -1,12 +1,10 @@
 import { Router } from 'express';
 import { AuditController } from '../controllers/audit.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 const auditController = new AuditController();
 
-// All audit routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/audit/logs
@@ -34,6 +32,6 @@ router.get('/stats', auditController.getAuditStats);
  * @desc    Export audit logs
  * @access  Private (admin only)
  */
-router.get('/export', requireRole('admin'), auditController.exportAuditLogs);
+router.get('/export', auditController.exportAuditLogs);
 
 export default router;

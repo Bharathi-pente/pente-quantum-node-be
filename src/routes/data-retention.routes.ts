@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import { dataRetentionService } from '../services/data-retention.service';
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 const router = Router();
 
-// All data retention routes require authentication
-router.use(authenticateKeycloak);
+// All data retention routes previously required Keycloak; now unauthenticated
 
 /**
  * @route   GET /api/data-retention-policies
@@ -78,7 +77,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
  * @desc    Create data retention policy
  * @access  Private (admin only)
  */
-router.post('/', requireRole('admin'), async (req: AuthRequest, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     const {
       name,
@@ -130,7 +129,7 @@ router.post('/', requireRole('admin'), async (req: AuthRequest, res) => {
  * @desc    Update data retention policy
  * @access  Private (admin only)
  */
-router.put('/:id', requireRole('admin'), async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const {
       name,
@@ -173,7 +172,7 @@ router.put('/:id', requireRole('admin'), async (req: AuthRequest, res) => {
  * @desc    Review data retention policy
  * @access  Private (admin only)
  */
-router.post('/:id/review', requireRole('admin'), async (req: AuthRequest, res) => {
+router.post('/:id/review', async (req: AuthRequest, res) => {
   try {
     const policy = await dataRetentionService.reviewPolicy(
       req.params.id,
@@ -199,7 +198,7 @@ router.post('/:id/review', requireRole('admin'), async (req: AuthRequest, res) =
  * @desc    Execute data cleanup
  * @access  Private (admin only)
  */
-router.post('/cleanup', requireRole('admin'), async (req: AuthRequest, res) => {
+router.post('/cleanup', async (req: AuthRequest, res) => {
   try {
     const { dryRun = true } = req.body;
 

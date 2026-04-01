@@ -6,13 +6,10 @@
 
 import { Router } from 'express';
 import monitoringController from '../controllers/monitoring.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
-// All monitoring routes require admin authentication
-router.use(authenticateKeycloak);
-router.use(requireRole('admin'));
+// Monitoring routes no longer enforce Keycloak admin checks
 
 /**
  * @route   GET /api/v1/monitoring/metrics

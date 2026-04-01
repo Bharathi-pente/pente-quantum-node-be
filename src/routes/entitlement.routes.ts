@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import entitlementController from '../controllers/entitlement.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createEntitlementGrantSchema,
@@ -12,20 +11,14 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   POST /api/v1/entitlement-grants
  * @desc    Create entitlement grant
  * @access  Private (admin)
  */
-router.post(
-  '/entitlement-grants',
-  requireRole('admin'),
-  validate(createEntitlementGrantSchema),
-  entitlementController.createGrant
-);
+router.post('/entitlement-grants', validate(createEntitlementGrantSchema), entitlementController.createGrant);
 
 /**
  * @route   GET /api/v1/entitlement-grants
@@ -54,24 +47,14 @@ router.get(
  * @desc    Update entitlement grant
  * @access  Private (admin)
  */
-router.put(
-  '/entitlement-grants/:id',
-  requireRole('admin'),
-  validate(updateEntitlementGrantSchema),
-  entitlementController.updateGrant
-);
+router.put('/entitlement-grants/:id', validate(updateEntitlementGrantSchema), entitlementController.updateGrant);
 
 /**
  * @route   DELETE /api/v1/entitlement-grants/:id
  * @desc    Delete entitlement grant
  * @access  Private (admin)
  */
-router.delete(
-  '/entitlement-grants/:id',
-  requireRole('admin'),
-  validate(getEntitlementGrantSchema),
-  entitlementController.deleteGrant
-);
+router.delete('/entitlement-grants/:id', validate(getEntitlementGrantSchema), entitlementController.deleteGrant);
 
 /**
  * @route   GET /api/v1/entitlements/check

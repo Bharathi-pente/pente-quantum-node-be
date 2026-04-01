@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import dunningService from '../services/dunning.service';
 import { dunningWorkflowService } from '../services/dunning.workflow.service';
 import { dunningSchedulerService } from '../services/dunning.scheduler.service';

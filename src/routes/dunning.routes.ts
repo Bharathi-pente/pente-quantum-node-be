@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import dunningController from '../controllers/dunning.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createDunningPolicySchema,
@@ -12,8 +11,7 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/dunning/policies
@@ -34,71 +32,42 @@ router.get('/policies/:id', validate(getDunningPolicySchema), dunningController.
  * @desc    Create dunning policy
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/policies',
-  requireRole('admin', 'finance'),
-  validate(createDunningPolicySchema),
-  dunningController.createPolicy
-);
+router.post('/policies', validate(createDunningPolicySchema), dunningController.createPolicy);
 
 /**
  * @route   PUT /api/v1/dunning/policies/:id
  * @desc    Update dunning policy
  * @access  Private (Admin/Finance)
  */
-router.put(
-  '/policies/:id',
-  requireRole('admin', 'finance'),
-  validate(updateDunningPolicySchema),
-  dunningController.updatePolicy
-);
+router.put('/policies/:id', validate(updateDunningPolicySchema), dunningController.updatePolicy);
 
 /**
  * @route   DELETE /api/v1/dunning/policies/:id
  * @desc    Delete dunning policy
  * @access  Private (Admin)
  */
-router.delete(
-  '/policies/:id',
-  requireRole('admin'),
-  validate(getDunningPolicySchema),
-  dunningController.deletePolicy
-);
+router.delete('/policies/:id', validate(getDunningPolicySchema), dunningController.deletePolicy);
 
 /**
  * @route   POST /api/v1/dunning/steps
  * @desc    Create dunning step
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/steps',
-  requireRole('admin', 'finance'),
-  validate(createDunningStepSchema),
-  dunningController.createStep
-);
+router.post('/steps', validate(createDunningStepSchema), dunningController.createStep);
 
 /**
  * @route   PUT /api/v1/dunning/steps/:id
  * @desc    Update dunning step
  * @access  Private (Admin/Finance)
  */
-router.put(
-  '/steps/:id',
-  requireRole('admin', 'finance'),
-  validate(updateDunningStepSchema),
-  dunningController.updateStep
-);
+router.put('/steps/:id', validate(updateDunningStepSchema), dunningController.updateStep);
 
 /**
  * @route   DELETE /api/v1/dunning/steps/:id
  * @desc    Delete dunning step
  * @access  Private (Admin/Finance)
  */
-router.delete(
-  '/steps/:id',
-  requireRole('admin', 'finance'),
-  dunningController.deleteStep
-);
+router.delete('/steps/:id', dunningController.deleteStep);
 
 /**
  * @route   GET /api/v1/dunning/overdue-invoices
@@ -112,11 +81,7 @@ router.get('/overdue-invoices', dunningController.getOverdueInvoices);
  * @desc    Start a dunning workflow
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/workflows/start',
-  requireRole('admin', 'finance'),
-  dunningController.startDunningWorkflow
-);
+router.post('/workflows/start', dunningController.startDunningWorkflow);
 
 /**
  * @route   GET /api/v1/dunning/workflows/:workflowId/status
@@ -130,11 +95,7 @@ router.get('/workflows/:workflowId/status', dunningController.getWorkflowStatus)
  * @desc    Send signal to workflow
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/workflows/:workflowId/signal',
-  requireRole('admin', 'finance'),
-  dunningController.sendWorkflowSignal
-);
+router.post('/workflows/:workflowId/signal', dunningController.sendWorkflowSignal);
 
 /**
  * @route   GET /api/v1/dunning/workflows/:workflowId/query
@@ -148,10 +109,6 @@ router.get('/workflows/:workflowId/query', dunningController.queryWorkflowStatus
  * @desc    Send manual reminder email for invoice
  * @access  Private (Admin/Finance)
  */
-router.post(
-  '/send-reminder/:invoiceId',
-  requireRole('admin', 'finance'),
-  dunningController.sendManualReminder
-);
+router.post('/send-reminder/:invoiceId', dunningController.sendManualReminder);
 
 export default router;

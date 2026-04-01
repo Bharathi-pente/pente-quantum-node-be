@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CurrencyController } from '../controllers/currency.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCurrencyConfigSchema,
@@ -10,8 +10,7 @@ import {
 
 const router = Router();
 
-// All currency routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @swagger

@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { PricingModelController } from '../controllers/pricingModel.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createPricingModelSchema,
@@ -11,20 +10,14 @@ import {
 const router = Router();
 const pricingModelController = new PricingModelController();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   POST /api/v1/rate-cards
  * @desc    Create rate card (alias for pricing model)
  * @access  Private (admin)
  */
-router.post(
-  '/',
-  requireRole('admin'),
-  validate(createPricingModelSchema),
-  pricingModelController.create
-);
+router.post('/', validate(createPricingModelSchema), pricingModelController.create);
 
 /**
  * @route   GET /api/v1/rate-cards
@@ -49,22 +42,13 @@ router.get(
  * @desc    Update rate card
  * @access  Private (admin)
  */
-router.put(
-  '/:id',
-  requireRole('admin'),
-  validate(updatePricingModelSchema),
-  pricingModelController.update
-);
+router.put('/:id', validate(updatePricingModelSchema), pricingModelController.update);
 
 /**
  * @route   DELETE /api/v1/rate-cards/:id
  * @desc    Delete rate card
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  pricingModelController.delete
-);
+router.delete('/:id', pricingModelController.delete);
 
 export default router;

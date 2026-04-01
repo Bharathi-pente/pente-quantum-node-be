@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import meterController from '../controllers/meter.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createMeterSchema,
@@ -15,20 +14,14 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   POST /api/v1/meters
  * @desc    Create meter
  * @access  Private (admin)
  */
-router.post(
-  '/',
-  requireRole('admin'),
-  validate(createMeterSchema),
-  meterController.create
-);
+router.post('/', validate(createMeterSchema), meterController.create);
 
 /**
  * @route   GET /api/v1/meters
@@ -42,7 +35,7 @@ router.get('/', meterController.getAll);
  * @desc    Get all meters (admin only - for debugging)
  * @access  Private (admin)
  */
-router.get('/all', requireRole('admin'), meterController.getAllAdmin);
+router.get('/all', meterController.getAllAdmin);
 
 /**
  * @route   GET /api/v1/meters/:id
@@ -56,24 +49,14 @@ router.get('/:id', validate(getMeterSchema), meterController.getById);
  * @desc    Update meter
  * @access  Private (admin)
  */
-router.put(
-  '/:id',
-  requireRole('admin'),
-  validate(updateMeterSchema),
-  meterController.update
-);
+router.put('/:id', validate(updateMeterSchema), meterController.update);
 
 /**
  * @route   DELETE /api/v1/meters/:id
  * @desc    Delete meter
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  validate(getMeterSchema),
-  meterController.delete
-);
+router.delete('/:id', validate(getMeterSchema), meterController.delete);
 
 /**
  * @swagger

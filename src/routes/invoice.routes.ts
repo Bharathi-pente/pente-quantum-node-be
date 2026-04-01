@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import invoiceController from '../controllers/invoice.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { createInvoiceSchema, updateInvoiceSchema, getInvoicesQuerySchema } from '../validators/invoice.validator';
 
@@ -36,7 +36,7 @@ const router = Router();
  *       409:
  *         description: Invoice number already exists
  */
-router.post('/', authenticateKeycloak, validate(createInvoiceSchema), invoiceController.create);
+router.post('/', validate(createInvoiceSchema), invoiceController.create);
 
 /**
  * @swagger
@@ -125,7 +125,7 @@ router.post('/', authenticateKeycloak, validate(createInvoiceSchema), invoiceCon
  *       403:
  *         description: Forbidden
  */
-router.get('/', authenticateKeycloak, validate(getInvoicesQuerySchema), invoiceController.getAll);
+router.get('/', validate(getInvoicesQuerySchema), invoiceController.getAll);
 
 /**
  * @swagger
@@ -157,7 +157,7 @@ router.get('/', authenticateKeycloak, validate(getInvoicesQuerySchema), invoiceC
  *       404:
  *         description: Invoice not found
  */
-router.get('/:id', authenticateKeycloak, invoiceController.getById);
+router.get('/:id', invoiceController.getById);
 
 /**
  * @swagger
@@ -199,7 +199,7 @@ router.get('/:id', authenticateKeycloak, invoiceController.getById);
  *       409:
  *         description: Invoice number already exists
  */
-router.put('/:id', authenticateKeycloak, validate(updateInvoiceSchema), invoiceController.update);
+router.put('/:id', validate(updateInvoiceSchema), invoiceController.update);
 
 /**
  * @swagger
@@ -240,6 +240,6 @@ router.put('/:id', authenticateKeycloak, validate(updateInvoiceSchema), invoiceC
  *       404:
  *         description: Invoice not found
  */
-router.delete('/:id', authenticateKeycloak, invoiceController.delete);
+router.delete('/:id', invoiceController.delete);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middleware/keycloakAuth.middleware';
+import { AuthRequest } from '../types/auth';
 import paymentMethodService from '../services/paymentMethod.service';
 import ApiResponse from '../utils/ApiResponse';
 import ApiError from '../utils/ApiError';

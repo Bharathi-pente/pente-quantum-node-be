@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import orgPaymentController from '../controllers/orgPayment.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import { createOrgPaymentSchema, updateOrgPaymentSchema, getOrgPaymentSchema, getOrgPaymentsQuerySchema } from '../validators/orgPayment.validator';
 
@@ -34,7 +34,7 @@ const router = Router();
  *       403:
  *         description: Forbidden
  */
-router.post('/', authenticateKeycloak, validate(createOrgPaymentSchema), orgPaymentController.create);
+router.post('/', validate(createOrgPaymentSchema), orgPaymentController.create);
 
 /**
  * @swagger
@@ -106,7 +106,7 @@ router.post('/', authenticateKeycloak, validate(createOrgPaymentSchema), orgPaym
  *       403:
  *         description: Forbidden
  */
-router.get('/', authenticateKeycloak, validate(getOrgPaymentsQuerySchema), orgPaymentController.getAll);
+router.get('/', validate(getOrgPaymentsQuerySchema), orgPaymentController.getAll);
 
 /**
  * @swagger
@@ -138,7 +138,7 @@ router.get('/', authenticateKeycloak, validate(getOrgPaymentsQuerySchema), orgPa
  *       404:
  *         description: Organization payment not found
  */
-router.get('/:id', authenticateKeycloak, validate(getOrgPaymentSchema), orgPaymentController.getById);
+router.get('/:id', validate(getOrgPaymentSchema), orgPaymentController.getById);
 
 /**
  * @swagger
@@ -178,7 +178,7 @@ router.get('/:id', authenticateKeycloak, validate(getOrgPaymentSchema), orgPayme
  *       404:
  *         description: Organization payment not found
  */
-router.put('/:id', authenticateKeycloak, validate(updateOrgPaymentSchema), orgPaymentController.update);
+router.put('/:id', validate(updateOrgPaymentSchema), orgPaymentController.update);
 
 /**
  * @swagger
@@ -217,6 +217,6 @@ router.put('/:id', authenticateKeycloak, validate(updateOrgPaymentSchema), orgPa
  *       404:
  *         description: Organization payment not found
  */
-router.delete('/:id', authenticateKeycloak, validate(getOrgPaymentSchema), orgPaymentController.delete);
+router.delete('/:id', validate(getOrgPaymentSchema), orgPaymentController.delete);
 
 export default router;

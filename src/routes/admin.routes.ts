@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import adminController from '../controllers/admin.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
@@ -11,8 +10,7 @@ const router = Router();
  *     summary: Admin routes
  */
 
-// Apply authentication to all admin routes
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 router.get('/analytics', adminController.getAnalytics);
 router.get('/metrics', adminController.getPlatformMetrics);

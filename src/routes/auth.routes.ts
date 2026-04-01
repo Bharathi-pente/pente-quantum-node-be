@@ -3,7 +3,6 @@ import authController from '../controllers/auth.controller';
 import { validate } from '../middleware/validation.middleware';
 import { loginSchema, createUserSchema } from '../validators/user.validator';
 import { authLimiter } from '../middleware/rateLimiter.middleware';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 
 const router = Router();
 
@@ -13,7 +12,7 @@ const router = Router();
  * @access  Private
  * @deprecated Use Keycloak authentication instead
  */
-router.post('/login', authenticateKeycloak, authLimiter, validate(loginSchema), authController.login);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @route   POST /api/v1/auth/register
@@ -21,14 +20,14 @@ router.post('/login', authenticateKeycloak, authLimiter, validate(loginSchema), 
  * @access  Private
  * @deprecated Use Keycloak user management instead
  */
-router.post('/register', authenticateKeycloak, authLimiter, validate(createUserSchema), authController.register);
+router.post('/register', authLimiter, validate(createUserSchema), authController.register);
 
 /**
  * @route   GET /api/v1/auth/me
  * @desc    Get current user from Keycloak token
  * @access  Private
  */
-router.get('/me', authenticateKeycloak, authController.getCurrentUser);
+router.get('/me', authController.getCurrentUser);
 
 /**
  * @route   POST /api/v1/auth/validate
@@ -36,6 +35,6 @@ router.get('/me', authenticateKeycloak, authController.getCurrentUser);
  * @access  Private
  * @deprecated Token validation is handled by Keycloak middleware
  */
-router.post('/validate', authenticateKeycloak, authController.validateToken);
+router.post('/validate', authController.validateToken);
 
 export default router;

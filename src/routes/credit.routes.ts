@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CreditController } from '../controllers/credit.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createCreditSchema,
@@ -13,8 +13,8 @@ import {
 
 const router = Router();
 
-// All credit routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
+
 
 /**
  * @swagger

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import webhookController from '../controllers/webhook.controller';
-import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createWebhookSchema,
@@ -10,8 +10,7 @@ import {
 
 const router = Router();
 
-// All webhook routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   POST /api/v1/webhooks

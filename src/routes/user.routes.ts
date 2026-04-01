@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import userController from '../controllers/user.controller';
-import { authenticateKeycloak, requireRole } from '../middleware/keycloakAuth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createUserSchema,
@@ -15,15 +14,9 @@ const router = Router();
  * @desc    Create user
  * @access  Private
  */
-router.post(
-  '/',
-  authenticateKeycloak,
-  validate(createUserSchema),
-  userController.create
-);
+router.post('/', validate(createUserSchema), userController.create);
 
-// All routes require authentication
-router.use(authenticateKeycloak);
+// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/users
@@ -44,23 +37,13 @@ router.get('/:id', validate(getUserSchema), userController.getById);
  * @desc    Update user
  * @access  Private (admin or self)
  */
-router.put(
-  '/:id',
-  requireRole('admin'),
-  validate(updateUserSchema),
-  userController.update
-);
+router.put('/:id', validate(updateUserSchema), userController.update);
 
 /**
  * @route   DELETE /api/v1/users/:id
  * @desc    Delete user
  * @access  Private (admin)
  */
-router.delete(
-  '/:id',
-  requireRole('admin'),
-  validate(getUserSchema),
-  userController.delete
-);
+router.delete('/:id', validate(getUserSchema), userController.delete);
 
 export default router;
