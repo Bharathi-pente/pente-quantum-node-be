@@ -44,3 +44,6 @@ tmp/
 
 # Temporary scripts
 check-db.js
+clear-database.js
+migrations/add-created-by-simple.js
+migrations/run-migration-direct.js
