@@ -1,1 +1,0 @@
-SELECT COUNT(*) FROM email_templates;
