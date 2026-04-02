@@ -1,17 +1,9 @@
-/**
- * DataLoader Middleware
- * 
- * Attach DataLoader instances to each request
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { createDataLoaders, DataLoaders } from '../utils/dataLoader';
 
-declare global {
-  namespace Express {
-    interface Request {
-      loaders: DataLoaders;
-    }
+declare module 'express' {
+  interface Request {
+    loaders: DataLoaders;
   }
 }
 

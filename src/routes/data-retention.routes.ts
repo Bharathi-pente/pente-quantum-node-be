@@ -165,7 +165,7 @@ router.post('/', async (req: AuthRequest, res) => {
  * @desc    Update data retention policy
  * @access  Private (admin only)
  */
-router.put('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const {
       name,

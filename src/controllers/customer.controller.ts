@@ -167,7 +167,7 @@ export class CustomerController {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     // Use orgId from params if provided (for admin accessing other orgs), otherwise use user's orgId
-    const orgId = req.params.id || req.user?.orgId!;
+    const orgId = req.params.id || req.user?.orgId || null;
     const filters = {
       status: req.query.status as string,
       product_id: req.query.product_id as string,

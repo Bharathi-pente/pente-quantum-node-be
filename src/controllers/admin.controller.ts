@@ -25,35 +25,59 @@ export class AdminController {
    *       200:
    *         description: Platform metrics
    */
-  getPlatformMetrics = asyncHandler(async (_req: AuthRequest, res: Response) => {
-    // Aggregate metrics across all organizations
-    const [
-      _totalOrganizations,
-      activeOrganizations,
-      _totalUsers,
-      _totalCustomers,
-      totalRevenue,
-      _activeSubscriptions,
-      totalEvents30d,
-    ] = await Promise.all([
-      prisma.organizations.count(),
-      prisma.organizations.count({ where: { status: 'active' } }),
-      prisma.users.count(),
-      prisma.customers.count(),
-      prisma.customers.aggregate({
-        _sum: { mrr: true },
-        where: { status: 'active' }
-      }),
-      prisma.customers.count({ where: { status: 'active' } }),
-      // Count events from the last 30 days (assuming events are in alert_history or similar)
-      prisma.alert_history.count({
-        where: {
-          triggered_at: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  getPlatformMetrics = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    // Aggregate metrics across user's organizations
+    await prisma.organizations.count({
+      where: { created_by: req.user.id }
+    });
+    const activeOrganizations = await prisma.organizations.count({
+      where: {
+        created_by: req.user.id,
+        status: 'active'
+      }
+    });
+    await prisma.users.count(); // Keep global for now
+    await prisma.customers.count({
+      where: {
+        organizations: {
+          created_by: req.user.id
+        }
+      }
+    });
+    const totalRevenue = await prisma.customers.aggregate({
+      _sum: { mrr: true },
+      where: {
+        status: 'active',
+        organizations: {
+          created_by: req.user.id
+        }
+      }
+    });
+    await prisma.customers.count({
+      where: {
+        status: 'active',
+        organizations: {
+          created_by: req.user.id
+        }
+      }
+    });
+    // Count events from the last 30 days (assuming events are in alert_history or similar)
+    const totalEvents30d = await prisma.alert_history.count({
+      where: {
+        triggered_at: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        },
+        customers: {
+          organizations: {
+            created_by: req.user.id
           }
         }
-      }),
-    ]);
+      }
+    });
 
     const currentMRR = Number(totalRevenue._sum.mrr || 0);
 
@@ -91,52 +115,59 @@ export class AdminController {
    *       200:
    *         description: Complete analytics data
    */
-  getAnalytics = asyncHandler(async (_req: AuthRequest, res: Response) => {
-    // Run all analytics calculations in parallel for better performance
-    const [
-      // Platform metrics
-      totalOrganizations,
-      activeOrganizations,
-      totalUsers,
-      totalCustomers,
-      totalRevenue,
-      totalEvents30d,
-      
-      // MRR history
-      mrrHistory,
-      
-      // Revenue by plan
-      revenueByPlan,
-      
-      // Top organizations
-      organizations
-    ] = await Promise.all([
-      // Platform metrics calculations
-      prisma.organizations.count(),
-      prisma.organizations.count({ where: { status: 'active' } }),
-      prisma.users.count(),
-      prisma.customers.count(),
-      prisma.customers.aggregate({
-        _sum: { mrr: true },
-        where: { status: 'active' }
-      }),
-      prisma.alert_history.count({
-        where: {
-          triggered_at: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  getAnalytics = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    // Run all analytics calculations sequentially to avoid connection issues
+    const totalOrganizations = await prisma.organizations.count({
+      where: { created_by: req.user.id }
+    });
+    const activeOrganizations = await prisma.organizations.count({
+      where: {
+        created_by: req.user.id,
+        status: 'active'
+      }
+    });
+    const totalUsers = await prisma.users.count(); // Keep global for now, or filter if needed
+    const totalCustomers = await prisma.customers.count({
+      where: {
+        organizations: {
+          created_by: req.user.id
+        }
+      }
+    });
+    const totalRevenue = await prisma.customers.aggregate({
+      _sum: { mrr: true },
+      where: {
+        status: 'active',
+        organizations: {
+          created_by: req.user.id
+        }
+      }
+    });
+    const totalEvents30d = await prisma.alert_history.count({
+      where: {
+        triggered_at: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        },
+        customers: {
+          organizations: {
+            created_by: req.user.id
           }
         }
-      }),
-      
-      // MRR history (simplified version)
-      this.generateMrrHistory(),
-      
-      // Revenue by plan
-      this.generateRevenueByPlan(),
-      
-      // Top organizations with MRR and events
-      this.getTopOrganizations()
-    ]);
+      }
+    });
+
+    // MRR history (simplified version)
+    const mrrHistory = await this.generateMrrHistory(req.user.id);
+
+    // Revenue by plan
+    const revenueByPlan = await this.generateRevenueByPlan(req.user.id);
+
+    // Top organizations with MRR and events
+    const organizations = await this.getTopOrganizations(req.user.id);
 
     const currentMRR = Number(totalRevenue._sum.mrr || 0);
 
@@ -194,6 +225,12 @@ export class AdminController {
 
     const where: Record<string, any> = {};
 
+    // Filter by user - meters are now user-specific
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+    where.created_by = req.user.id;
+
     if (status) where.status = status;
     if (eventType) where.event_type = eventType;
     if (aggregation) where.aggregation = aggregation;
@@ -235,8 +272,16 @@ export class AdminController {
    *       200:
    *         description: List of all pricing models
    */
-  getPricingModels = asyncHandler(async (_req: AuthRequest, res: Response) => {
+  getPricingModels = asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Filter by user - pricing models are now user-specific
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const pricingModels = await prisma.pricing_models.findMany({
+      where: {
+        created_by: req.user.id
+      },
       include: {
         organizations: {
           select: { name: true }
@@ -299,15 +344,23 @@ export class AdminController {
    *         description: Pricing model created successfully
    */
   createPricingModel = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const { org_id, ...pricingData } = req.body;
 
-    // Verify organization exists
+    // Verify organization exists and belongs to the user
     const organization = await prisma.organizations.findUnique({
       where: { id: org_id }
     });
 
     if (!organization) {
       throw ApiError.badRequest('Invalid organization ID');
+    }
+
+    if (organization.created_by !== req.user.id) {
+      throw ApiError.forbidden('You can only create pricing models for your own organizations');
     }
 
     // Check for existing pricing model with same name in the organization
@@ -339,6 +392,7 @@ export class AdminController {
       data: {
         ...pricingData,
         org_id: org_id,
+        created_by: req.user.id,
         status: pricingData.status || 'active',
       },
       include: {
@@ -432,16 +486,28 @@ export class AdminController {
    *         description: Pricing model updated successfully
    */
   updatePricingModel = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const { id } = req.params;
     const { org_id, ...updateData } = req.body;
 
     // Check if pricing model exists
     const existingModel = await prisma.pricing_models.findUnique({
       where: { id },
+      include: {
+        organizations: true
+      }
     });
 
     if (!existingModel) {
       throw ApiError.notFound('Pricing model not found');
+    }
+
+    // Check if the pricing model belongs to the user (via organization ownership)
+    if (existingModel.organizations.created_by !== req.user.id) {
+      throw ApiError.forbidden('You can only update pricing models for your own organizations');
     }
 
     // If name is being updated, check for conflicts
@@ -538,16 +604,25 @@ export class AdminController {
    *       200:
    *         description: MRR history data
    */
-  getMrrHistory = asyncHandler(async (_req: AuthRequest, res: Response) => {
+  getMrrHistory = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     // Generate last 12 months of MRR data based on current active customers
     // Note: This is a simplified version. In production, you'd want historical snapshots
     const mrrHistory = [];
     const now = new Date();
 
-    // Get current total MRR
+    // Get current total MRR for user's organizations
     const currentMrrResult = await prisma.customers.aggregate({
       _sum: { mrr: true },
-      where: { status: 'active' }
+      where: {
+        status: 'active',
+        organizations: {
+          created_by: req.user.id
+        }
+      }
     });
     const currentMRR = Number(currentMrrResult._sum.mrr || 0);
 
@@ -577,7 +652,11 @@ export class AdminController {
    *       200:
    *         description: Revenue by plan data
    */
-  getRevenueByPlan = asyncHandler(async (_req: AuthRequest, res: Response) => {
+  getRevenueByPlan = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const revenueByPlan = await prisma.customers.groupBy({
       by: ['product_id'],
       _sum: {
@@ -587,7 +666,10 @@ export class AdminController {
         id: true
       },
       where: {
-        status: 'active'
+        status: 'active',
+        organizations: {
+          created_by: req.user.id
+        }
       }
     });
 
@@ -664,15 +746,20 @@ export class AdminController {
   });
 
   // Helper methods for analytics
-  private async generateMrrHistory() {
+  private async generateMrrHistory(userId: string) {
     // Generate last 12 months of MRR data based on current active customers
     const mrrHistory = [];
     const now = new Date();
 
-    // Get current total MRR
+    // Get current total MRR for user's organizations
     const currentMrrResult = await prisma.customers.aggregate({
       _sum: { mrr: true },
-      where: { status: 'active' }
+      where: {
+        status: 'active',
+        organizations: {
+          created_by: userId
+        }
+      }
     });
     const currentMRR = Number(currentMrrResult._sum.mrr || 0);
 
@@ -690,7 +777,7 @@ export class AdminController {
     return mrrHistory;
   }
 
-  private async generateRevenueByPlan() {
+  private async generateRevenueByPlan(userId: string) {
     const revenueByPlan = await prisma.customers.groupBy({
       by: ['product_id'],
       _sum: {
@@ -700,7 +787,10 @@ export class AdminController {
         id: true
       },
       where: {
-        status: 'active'
+        status: 'active',
+        organizations: {
+          created_by: userId
+        }
       }
     });
 
@@ -724,9 +814,10 @@ export class AdminController {
     return formattedData;
   }
 
-  private async getTopOrganizations() {
-    // Get top 3 organizations by MRR
+  private async getTopOrganizations(userId: string) {
+    // Get top 3 organizations by MRR for the user
     const organizations = await prisma.organizations.findMany({
+      where: { created_by: userId },
       take: 3,
       orderBy: { created_at: 'desc' }, // We'll sort by MRR after calculation
       include: {
@@ -789,6 +880,95 @@ export class AdminController {
 
     return transformedOrganizations;
   }
+
+  /**
+   * @swagger
+   * /admin/products:
+   *   get:
+   *     summary: Get all products for admin
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of products
+   */
+  getProducts = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    const products = await prisma.products.findMany({
+      where: {
+        created_by: req.user.id
+      },
+      include: {
+        organizations: {
+          select: { name: true }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    res.json(ApiResponse.success(products));
+  });
+
+  /**
+   * @swagger
+   * /admin/feature-matrix:
+   *   get:
+   *     summary: Get feature matrix for admin
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Feature matrix data
+   */
+  getFeatureMatrix = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    // Return sample feature matrix data
+    const featureMatrix = [
+      {
+        id: 'basic',
+        name: 'Basic Plan',
+        features: {
+          users: 'Up to 5',
+          api_calls: '10,000/month',
+          storage: '1GB',
+          support: 'Email',
+        },
+        price: 0,
+      },
+      {
+        id: 'pro',
+        name: 'Pro Plan',
+        features: {
+          users: 'Up to 50',
+          api_calls: '100,000/month',
+          storage: '10GB',
+          support: 'Priority Email',
+        },
+        price: 29,
+      },
+      {
+        id: 'enterprise',
+        name: 'Enterprise Plan',
+        features: {
+          users: 'Unlimited',
+          api_calls: 'Unlimited',
+          storage: 'Unlimited',
+          support: '24/7 Phone',
+        },
+        price: 99,
+      },
+    ];
+
+    res.json(ApiResponse.success(featureMatrix));
+  });
 }
 
 export default new AdminController();

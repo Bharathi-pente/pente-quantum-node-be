@@ -2,6 +2,8 @@ import { Router } from 'express';
 import productController from '../controllers/product.controller';
 import rateLimitController from '../controllers/rateLimit.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createProductSchema,
   updateProductSchema,
@@ -10,6 +12,10 @@ import {
 import { getByProductSchema } from '../validators/rateLimit.validator';
 
 const router = Router();
+
+// Apply authentication and user enrichment middleware
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @route   POST /api/v1/products

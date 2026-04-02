@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import userController from '../controllers/user.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createUserSchema,
   updateUserSchema,
@@ -9,14 +11,16 @@ import {
 
 const router = Router();
 
+// Apply authentication to all user routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
+
 /**
  * @route   POST /api/v1/users
  * @desc    Create user
  * @access  Private
  */
 router.post('/', validate(createUserSchema), userController.create);
-
-// Keycloak authentication removed — routes are unprotected by Keycloak
 
 /**
  * @route   GET /api/v1/users

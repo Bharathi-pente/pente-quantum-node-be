@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import adminController from '../controllers/admin.controller';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 
 const router = Router();
+
+// Apply authentication to all admin routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @swagger
@@ -9,8 +15,6 @@ const router = Router();
  *   get:
  *     summary: Admin routes
  */
-
-// Keycloak authentication removed — routes are unprotected by Keycloak
 
 router.get('/analytics', adminController.getAnalytics);
 router.get('/metrics', adminController.getPlatformMetrics);
@@ -21,5 +25,7 @@ router.put('/pricing-models/:id', adminController.updatePricingModel);
 router.get('/mrr-history', adminController.getMrrHistory);
 router.get('/revenue-by-plan', adminController.getRevenueByPlan);
 router.get('/matrix-pricing', adminController.getMatrixPricing);
+router.get('/products', adminController.getProducts);
+router.get('/feature-matrix', adminController.getFeatureMatrix);
 
 export default router;

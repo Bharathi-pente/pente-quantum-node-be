@@ -69,7 +69,7 @@ export abstract class BaseService<T extends { id: string; [key: string]: any }> 
   async create(data: Partial<T>, request?: any): Promise<T> {
     try {
       const record = await this.model.create({
-        data: this.beforeCreate(data),
+        data: this.beforeCreate(data, request),
         ...(this.config.include && { include: this.config.include }),
       });
 
@@ -253,7 +253,7 @@ export abstract class BaseService<T extends { id: string; [key: string]: any }> 
   /**
    * Hook: Transform data before create
    */
-  protected beforeCreate(data: Partial<T>): Partial<T> {
+  protected beforeCreate(data: Partial<T>, _request?: any): Partial<T> {
     return data;
   }
 

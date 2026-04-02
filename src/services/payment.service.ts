@@ -143,14 +143,17 @@ export class PaymentService {
     }
   }
 
-  async findAll(orgId: string, page: number = 1, limit: number = 10, filters: any = {}) {
+  async findAll(orgId: string | null, page: number = 1, limit: number = 10, filters: any = {}) {
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      customers: {
+    const where: any = {};
+
+    // Only filter by org_id if user is not a super admin (orgId is not null)
+    if (orgId !== null) {
+      where.customers = {
         org_id: orgId,
-      },
-    };
+      };
+    }
 
     if (filters.status) {
       where.status = filters.status;

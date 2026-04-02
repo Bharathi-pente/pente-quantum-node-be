@@ -53,7 +53,18 @@ async function loginUser(email: string, password: string): Promise<KeycloakToken
   } catch (err: any) {
     const status = err.response?.status;
     const errorDesc = err.response?.data?.error_description;
+    const error = err.response?.data?.error;
 
+    // Log the full error for debugging
+    console.error('Keycloak login error:', {
+      status,
+      error,
+      errorDesc,
+      fullResponse: err.response?.data
+    });
+
+    // Return the actual Keycloak error description
+    if (errorDesc) throw new Error(errorDesc);
     if (status === 401) throw new Error('Invalid email or password');
     if (status === 400) throw new Error(errorDesc || 'Bad login request');
     throw new Error('Keycloak login failed');
@@ -103,7 +114,7 @@ async function logoutUser(refreshTokenValue: string): Promise<void> {
 
 // ─────────────────────────────────────────────────────────────
 // CREATE USER: Register a new user in Keycloak + assign client role
-// role must be one of: 'billing-admin' | 'billing-manager' | 'billing-viewer'
+// role must be one of: 'billing-admin' | 'billing-manager' | 'billing-org-admin' | 'billing-viewer'
 // Returns: keycloakUserId (string UUID)
 // ─────────────────────────────────────────────────────────────
 async function createKeycloakUser(
@@ -122,6 +133,10 @@ async function createKeycloakUser(
       email: email,
       enabled: true,
       emailVerified: true,
+      requiredActions: [], // Explicitly set no required actions
+      attributes: {
+        // Additional attributes to ensure clean user creation
+      },
       credentials: [
         {
           type: 'password',

@@ -152,7 +152,7 @@ router.post('/', async (req: AuthRequest, res) => {
  * @desc    Update compliance report
  * @access  Private (admin only)
  */
-router.put('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, findings, download_url } = req.body;
 

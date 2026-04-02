@@ -4,6 +4,9 @@ import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
 import { AlertsController } from '../controllers/alerts.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
+import { requireRole, ROLES } from '../middleware/keycloakRole.middleware';
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
@@ -20,18 +23,22 @@ import {
 const router = Router();
 const alertsController = new AlertsController();
 
+// Apply authentication and user enrichment to all organization routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
+
 /**
  * @route   POST /api/v1/organizations
  * @desc    Create organization
- * @access  Private
+ * @access  Private (Super Admin only)
  */
-router.post('/', validate(createOrganizationSchema), organizationController.create);
+router.post('/', requireRole(ROLES.ADMIN), validate(createOrganizationSchema), organizationController.create);
 
-// Keycloak authentication removed — routes are unprotected by Keycloak
+// Organization routes with Keycloak authentication
 
 /**
  * @route   GET /api/v1/organizations
- * @desc    Get all organizations
+ * @desc    Get all organizations (filtered by user)
  * @access  Private
  */
 router.get('/', organizationController.getAll);

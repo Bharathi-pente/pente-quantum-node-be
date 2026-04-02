@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { Webhook, WebhookLog, WebhookEvent, IWebhookRepository, IWebhookLogRepository, IWebhookEventRepository } from '../interfaces/IWebhookRepository';
 
-const prisma = new PrismaClient();
+import prisma from '../../config/database';
 
 export class WebhookRepository implements IWebhookRepository {
   async create(data: Partial<Webhook>): Promise<Webhook> {

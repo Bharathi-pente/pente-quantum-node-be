@@ -63,7 +63,7 @@ export class PricingModelController {
       res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
       return;
     }
-    const pricingModel = await pricingModelService.create(req.body, orgId);
+    const pricingModel = await pricingModelService.create(req.body, orgId, req.user!.id);
     res.status(201).json(ApiResponse.success(pricingModel, 'Pricing model created successfully'));
   });
 
@@ -118,11 +118,6 @@ export class PricingModelController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
     const filters = {
       search: req.query.search as string,
       status: req.query.status as string,
@@ -130,7 +125,7 @@ export class PricingModelController {
       meter_id: req.query.meter_id as string,
     };
 
-    const result = await pricingModelService.findAll(orgId, page, limit, filters);
+    const result = await pricingModelService.findAll(req.user!.id, page, limit, filters);
     res.json(ApiResponse.success(result, 'Pricing models retrieved successfully'));
   });
 
@@ -155,12 +150,7 @@ export class PricingModelController {
    *         description: Pricing model details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
-    const pricingModel = await pricingModelService.findById(req.params.id, orgId);
+    const pricingModel = await pricingModelService.findById(req.params.id, req.user!.id);
     res.json(ApiResponse.success(pricingModel, 'Pricing model retrieved successfully'));
   });
 
@@ -213,12 +203,7 @@ export class PricingModelController {
    *         description: Pricing model updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
-      return;
-    }
-    const pricingModel = await pricingModelService.update(req.params.id, req.body, orgId);
+    const pricingModel = await pricingModelService.update(req.params.id, req.body, req.user!.id);
     res.json(ApiResponse.success(pricingModel, 'Pricing model updated successfully'));
   });
 
@@ -243,12 +228,7 @@ export class PricingModelController {
    *         description: Pricing model deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
-    await pricingModelService.delete(req.params.id, orgId);
+    await pricingModelService.delete(req.params.id, req.user!.id);
     res.json(ApiResponse.success(null, 'Pricing model deleted successfully'));
   });
 }

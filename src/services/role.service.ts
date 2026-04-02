@@ -31,10 +31,14 @@ export class RoleService {
     return role;
   }
 
-  async findAll(orgId: string, page = 1, limit = 10, search?: string) {
+  async findAllByCreator(creatorId: string, page = 1, limit = 10, search?: string) {
     const skip = (page - 1) * limit;
 
-    const where: any = { org_id: orgId };
+    const where: any = {
+      organizations: {
+        created_by: creatorId
+      }
+    };
 
     if (search) {
       where.name = { contains: search, mode: 'insensitive' };
@@ -52,6 +56,9 @@ export class RoleService {
           },
           _count: {
             select: { users: true },
+          },
+          organizations: {
+            select: { name: true },
           },
         },
       }),

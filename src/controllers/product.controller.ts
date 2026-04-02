@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../types/auth';
 import productService from '../services/product.service';
 import ApiResponse from '../utils/ApiResponse';
@@ -26,7 +26,6 @@ export class ProductController {
    *             type: object
    *             required:
    *               - name
-   *               - org_id
    *               - base_price
    *             properties:
    *               name:
@@ -38,7 +37,7 @@ export class ProductController {
    *               org_id:
    *                 type: string
    *                 format: uuid
-   *                 description: Organization ID
+   *                 description: Organization ID (optional)
    *               base_price:
    *                 type: number
    *                 description: Base price
@@ -53,8 +52,8 @@ export class ProductController {
    *       201:
    *         description: Product created successfully
    */
-  create = asyncHandler(async (req: Request, res: Response) => {
-    const product = await productService.create(req.body);
+  create = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const product = await productService.create(req.body, req);
     res.status(201).json(ApiResponse.success(product, 'Product created successfully'));
   });
 
@@ -71,21 +70,20 @@ export class ProductController {
    *         description: List of products
    */
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
     
     const filters = {
       status: req.query.status as string,
       search: req.query.search as string,
     };
 
-    const result = await productService.findAll(orgId, page, limit, filters);
+    // All users see only products they created (follows meters pattern)
+    const result = await productService.findAll(req.user, page, limit, filters);
     res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 
@@ -102,7 +100,11 @@ export class ProductController {
    *         description: Product details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const product = await productService.findById(req.params.id);
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    const product = await productService.findById(req.params.id, req.user);
     res.json(ApiResponse.success(product));
   });
 
@@ -119,7 +121,11 @@ export class ProductController {
    *         description: Product updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const product = await productService.update(req.params.id, req.body);
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    const product = await productService.update(req.params.id, req.body, req.user, req);
     res.json(ApiResponse.success(product, 'Product updated successfully'));
   });
 
@@ -136,7 +142,11 @@ export class ProductController {
    *         description: Product deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await productService.delete(req.params.id);
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    await productService.delete(req.params.id, req.user, req);
     res.json(ApiResponse.success(null, 'Product deleted successfully'));
   });
 

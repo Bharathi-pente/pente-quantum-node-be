@@ -2,24 +2,25 @@ import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
 
 export class MeterService {
-  async create(data: any, orgId: string) {
+  async create(data: any, request?: any) {
     const existingMeter = await prisma.meters.findFirst({
       where: {
-        org_id: orgId,
+        created_by: request?.user?.id,
         name: data.name,
       },
     });
 
     if (existingMeter) {
-      throw ApiError.conflict('Meter with this name already exists in your organization');
+      throw ApiError.conflict('Meter with this name already exists for your account');
     }
 
     try {
       return await prisma.meters.create({
         data: {
           ...data,
-          org_id: orgId,
+          org_id: data.org_id || null, // Optional org_id
           status: data.status || 'active',
+          created_by: request?.user?.id,
         },
       });
     } catch (error: any) {
@@ -30,14 +31,18 @@ export class MeterService {
     }
   }
 
-  async findAll(orgId: string | undefined, page = 1, limit = 10, filters?: any) {
+  async findAll(user?: any, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
     const where: any = {};
 
-    // Only filter by org_id if orgId is provided (not admin)
-    if (orgId) {
-      where.org_id = orgId;
+    // Permission-based filtering - REQUIRED for security
+    if (!user) {
+      // No user means unauthenticated - return nothing
+      return { meters: [], total: 0, page, limit };
     }
+
+    // All users see only meters they created
+    where.created_by = user.id;
 
     if (filters?.status) {
       where.status = filters.status;
@@ -69,11 +74,11 @@ export class MeterService {
     return { meters, total, page, limit };
   }
 
-  async findById(id: string, orgId: string) {
+  async findById(id: string, user?: any) {
     const meter = await prisma.meters.findFirst({
       where: {
         id,
-        org_id: orgId,
+        created_by: user?.id,
       },
     });
 
@@ -84,22 +89,22 @@ export class MeterService {
     return meter;
   }
 
-  async update(id: string, data: any, orgId: string) {
-    // Check if meter exists and belongs to org
-    await this.findById(id, orgId);
+  async update(id: string, data: any, user?: any) {
+    // Check if meter exists and belongs to user
+    await this.findById(id, user);
 
     // Check for name conflict if name is being updated
     if (data.name) {
       const existingMeter = await prisma.meters.findFirst({
         where: {
-          org_id: orgId,
+          created_by: user?.id,
           name: data.name,
           id: { not: id },
         },
       });
 
       if (existingMeter) {
-        throw ApiError.conflict('Meter with this name already exists in your organization');
+        throw ApiError.conflict('Meter with this name already exists for your account');
       }
     }
 
@@ -116,9 +121,9 @@ export class MeterService {
     }
   }
 
-  async delete(id: string, orgId: string) {
-    // Check if meter exists and belongs to org
-    await this.findById(id, orgId);
+  async delete(id: string, user?: any) {
+    // Check if meter exists and belongs to user
+    await this.findById(id, user);
 
     try {
       await prisma.meters.delete({
@@ -133,12 +138,12 @@ export class MeterService {
   }
 
   // Real-time meter data methods
-  async getRealtimeReadings(meterId: string, orgId: string, timeframe: string = '24h', granularity: string = 'hour') {
-    // Verify meter exists and belongs to org
+  async getRealtimeReadings(meterId: string, user?: any, timeframe: string = '24h', granularity: string = 'hour') {
+    // Verify meter exists and belongs to user
     const meter = await prisma.meters.findFirst({
       where: {
         id: meterId,
-        org_id: orgId,
+        created_by: user?.id,
       },
     });
 
@@ -213,9 +218,9 @@ export class MeterService {
     };
   }
 
-  async getRealtimeStats(orgId: string, eventType?: string, timeframe: string = '24h') {
-    // Get all meters for the organization
-    const where: any = { org_id: orgId };
+  async getRealtimeStats(user?: any, eventType?: string, timeframe: string = '24h') {
+    // Get all meters for the user
+    const where: any = { created_by: user?.id };
     if (eventType) {
       where.event_type = eventType;
     }
@@ -281,12 +286,12 @@ export class MeterService {
     };
   }
 
-  async getRealtimeEvents(meterId: string, orgId: string, limit: number = 50, since?: string) {
-    // Verify meter exists and belongs to org
+  async getRealtimeEvents(meterId: string, user?: any, limit: number = 50, since?: string) {
+    // Verify meter exists and belongs to user
     const meter = await prisma.meters.findFirst({
       where: {
         id: meterId,
-        org_id: orgId,
+        created_by: user?.id,
       },
     });
 
@@ -325,12 +330,12 @@ export class MeterService {
     };
   }
 
-  async getPerformanceMetrics(meterId: string, orgId: string, timeframe: string = '24h') {
-    // Verify meter exists and belongs to org
+  async getPerformanceMetrics(meterId: string, user?: any, timeframe: string = '24h') {
+    // Verify meter exists and belongs to user
     const meter = await prisma.meters.findFirst({
       where: {
         id: meterId,
-        org_id: orgId,
+        created_by: user?.id,
       },
     });
 
@@ -363,9 +368,9 @@ export class MeterService {
     };
   }
 
-  async getHealthMonitoring(orgId: string, status?: string, eventType?: string) {
-    // Get all meters for the organization
-    const where: any = { org_id: orgId };
+  async getHealthMonitoring(user?: any, status?: string, eventType?: string) {
+    // Get all meters for the user
+    const where: any = { created_by: user?.id };
     if (eventType) {
       where.event_type = eventType;
     }

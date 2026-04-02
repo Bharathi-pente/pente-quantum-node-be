@@ -87,12 +87,15 @@ export class RoleController {
    *         description: List of roles
    */
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
-    const orgId = req.user?.orgId!;
 
-    const { roles, total } = await roleService.findAll(orgId, page, limit, search);
+    const { roles, total } = await roleService.findAllByCreator(req.user.id, page, limit, search);
     res.json(ApiResponse.paginated(roles, page, limit, total));
   });
 

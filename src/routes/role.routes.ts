@@ -1,9 +1,15 @@
 import express from 'express';
 import roleController from '../controllers/role.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import { createRoleSchema, updateRoleSchema } from '../validators/role.validator';
 
 const router = express.Router();
+
+// Apply authentication to all role routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @swagger

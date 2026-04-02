@@ -7,8 +7,7 @@ import Sentry from '../config/sentry';
 export const errorHandler = (
   err: Error | ApiError,
   req: Request,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ) => {
   let statusCode = 500;
   let message = 'Internal Server Error';

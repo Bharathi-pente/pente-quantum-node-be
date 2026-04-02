@@ -16,6 +16,28 @@ import ApiError from '../utils/ApiError';
 import type { AuthRequest } from '../types/auth';
 
 /**
+ * Organization Context type
+ */
+export interface OrgContext {
+  orgId?: string;
+  isSuperAdmin?: boolean;
+}
+
+/**
+ * Get organization context from authenticated user
+ */
+export const getOrgContext = (req: AuthRequest): OrgContext | undefined => {
+  const orgId = req.user?.orgId;
+  const isSuperAdmin = req.user?.roles?.includes('super_admin') ?? false;
+
+  if (!orgId && !isSuperAdmin) {
+    return undefined;
+  }
+
+  return { orgId, isSuperAdmin };
+};
+
+/**
  * Middleware that requires organization context from authenticated user
  * 
  * @throws ApiError.unauthorized if no organization context is found

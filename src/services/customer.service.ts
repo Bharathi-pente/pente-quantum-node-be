@@ -128,9 +128,14 @@ export class CustomerService {
     }
   }
 
-  async findAll(orgId: string, page = 1, limit = 10, filters?: any) {
+  async findAll(orgId: string | null, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
-    const where: any = { org_id: orgId };
+    const where: any = {};
+
+    // Only filter by org_id if user is not a super admin (orgId is not null)
+    if (orgId !== null) {
+      where.org_id = orgId;
+    }
 
     if (filters?.status) {
       where.status = filters.status;

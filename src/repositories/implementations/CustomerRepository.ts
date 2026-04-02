@@ -49,7 +49,7 @@ export class CustomerRepository extends BaseRepository<customers> implements ICu
     } = options;
 
     // Build base where clause
-    let baseWhere: any = { org_id: orgId };
+    const baseWhere: any = { org_id: orgId };
 
     if (filters.status) {
       baseWhere.status = filters.status;

@@ -1,14 +1,22 @@
 import { Request } from 'express';
 
 export interface AuthUser {
-  id: string;
-  email?: string;
+  // From Keycloak
+  keycloakId: string;
+  email: string;
+  name?: string | null;
+  roles?: string[];
+  realmRoles?: string[];
+  tokenExpiry?: number;
+  // From Database (added by enrichUserMiddleware)
+  id?: string;
+  orgId?: string | null;
+  organization?: string | null;
+  dbRoles?: string[];
+  // Legacy fields (for backward compatibility)
   username?: string;
   firstName?: string;
   lastName?: string;
-  roles?: string[];
-  orgId?: string;
-  organization?: string;
   tokenPayload?: any;
 }
 

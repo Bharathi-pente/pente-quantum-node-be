@@ -75,18 +75,22 @@ export class UserController {
    *         description: List of users
    */
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
     const status = req.query.status as string;
     const role_id = req.query.role_id as string;
-    const orgId = req.user?.orgId!;
 
     const filters: any = {};
     if (status) filters.status = status;
     if (role_id) filters.role_id = role_id;
 
-    const { users, total } = await userService.findAll(orgId, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
+    // For admin users, show users from organizations they created
+    const { users, total } = await userService.findAllByCreator(req.user.id, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
     res.json(ApiResponse.paginated(users, page, limit, total));
   });
 

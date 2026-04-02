@@ -1,6 +1,8 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import { AuditLogger } from '../utils/audit-logger';
 import { BaseService } from './base/BaseService';
+import { buildOffsetPaginationResponse } from '../utils/pagination';
 import { products, Prisma } from '@prisma/client';
 
 export class ProductService extends BaseService<products> {
@@ -66,9 +68,174 @@ export class ProductService extends BaseService<products> {
   }
 
   /**
-   * Override delete to check for customers
+   * Override create to follow meters pattern - user-specific ownership
    */
-  async delete(id: string, orgId?: string, request?: any): Promise<void> {
+  async create(data: Partial<products>, request?: any): Promise<products> {
+    // Check for duplicate product name for this user
+    const existingProduct = await prisma.products.findFirst({
+      where: {
+        created_by: request?.user?.id,
+        name: data.name,
+      },
+    });
+
+    if (existingProduct) {
+      throw ApiError.conflict('Product with this name already exists for your account');
+    }
+
+    try {
+      const record = await this.model.create({
+        data: {
+          ...data,
+          org_id: data.org_id || null, // Optional org_id
+          status: data.status || 'active',
+          created_by: request?.user?.id,
+          base_price: data.base_price || new Prisma.Decimal(0),
+        },
+      });
+
+      if (this.config.auditLogging && data.org_id) {
+        await AuditLogger.logSuccess(
+          data.org_id,
+          request?.user?.email || 'system',
+          'products.create',
+          record.name,
+          record.id,
+          data,
+          request
+        );
+      }
+
+      return record;
+    } catch (error: any) {
+      if (error.code === 'P2003') {
+        throw ApiError.badRequest('Invalid organization ID');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Override findAll to filter by created_by (follows meters pattern)
+   */
+  async findAll(
+    user?: any,
+    page = 1,
+    limit = 10,
+    filters: any = {}
+  ): Promise<any> {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+
+    // Permission-based filtering - REQUIRED for security
+    if (!user) {
+      // No user means unauthenticated - return nothing
+      return buildOffsetPaginationResponse([], 0, page, limit);
+    }
+
+    // All users see only products they created
+    where.created_by = user.id;
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.search && this.config.searchableFields) {
+      where.OR = this.config.searchableFields.map((field: string) => ({
+        [field]: { contains: filters.search, mode: 'insensitive' }
+      }));
+    }
+
+    const [items, total] = await Promise.all([
+      this.model.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        ...(this.config.selectFields && { select: this.config.selectFields }),
+        ...(this.config.include && { include: this.config.include }),
+      }),
+      this.model.count({ where }),
+    ]);
+
+    return buildOffsetPaginationResponse(items, total, page, limit);
+  }
+
+  /**
+   * Override findById to filter by created_by (follows meters pattern)
+   */
+  async findById(id: string, user?: any): Promise<products> {
+    const record = await this.model.findFirst({
+      where: {
+        id,
+        created_by: user?.id,
+      },
+      ...(this.config.include && { include: this.config.include }),
+    });
+
+    if (!record) {
+      throw ApiError.notFound('Product not found');
+    }
+
+    return record;
+  }
+
+  /**
+   * Override update to filter by created_by (follows meters pattern)
+   */
+  async update(id: string, data: Partial<products>, user?: any, request?: any): Promise<products> {
+    // Check if record exists and belongs to user
+    await this.findById(id, user);
+
+    // Check for name conflict if name is being updated
+    if (data.name) {
+      const existingProduct = await prisma.products.findFirst({
+        where: {
+          created_by: user?.id,
+          name: data.name,
+          id: { not: id },
+        },
+      });
+
+      if (existingProduct) {
+        throw ApiError.conflict('Product with this name already exists for your account');
+      }
+    }
+
+    try {
+      const record = await this.model.update({
+        where: { id },
+        data: this.beforeUpdate(data),
+        ...(this.config.include && { include: this.config.include }),
+      });
+
+      if (this.config.auditLogging && record.org_id) {
+        await AuditLogger.logSuccess(
+          record.org_id,
+          request?.user?.email || 'system',
+          'products.update',
+          record.name,
+          record.id,
+          data,
+          request
+        );
+      }
+
+      return record;
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw ApiError.notFound('Product not found');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Override delete to check for customers (follows meters pattern)
+   */
+  async delete(id: string, user?: any, _request?: any): Promise<void> {
+    // Check if record exists and belongs to user
+    await this.findById(id, user);
+
     // Check if any customers are using this product
     const customerCount = await prisma.customers.count({
       where: { product_id: id },
@@ -80,8 +247,28 @@ export class ProductService extends BaseService<products> {
       );
     }
 
-    // Call parent delete
-    await super.delete(id, orgId, request);
+    try {
+      await this.model.delete({
+        where: { id },
+      });
+
+      // if (this.config.auditLogging && request?.user?.orgId) {
+      //   await AuditLogger.logSuccess(
+      //     request.user.orgId,
+      //     request?.user?.email || 'system',
+      //     'products.delete',
+      //     id,
+      //     id,
+      //     {},
+      //     request
+      //   );
+      // }
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw ApiError.notFound('Product not found');
+      }
+      throw error;
+    }
   }
 
   async addFeature(productId: string, featureId: string) {

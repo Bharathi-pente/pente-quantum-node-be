@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import meterController from '../controllers/meter.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createMeterSchema,
   updateMeterSchema,
@@ -14,7 +16,9 @@ import {
 
 const router = Router();
 
-// Keycloak authentication removed — routes are unprotected by Keycloak
+// Apply authentication to all meter routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @route   POST /api/v1/meters

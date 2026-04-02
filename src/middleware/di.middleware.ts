@@ -1,17 +1,9 @@
-/**
- * Dependency Injection Middleware
- * 
- * Creates a scoped DI container for each request
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { container } from '../core/DIContainer';
 
-declare global {
-  namespace Express {
-    interface Request {
-      container: typeof container;
-    }
+declare module 'express' {
+  interface Request {
+    container: typeof container;
   }
 }
 

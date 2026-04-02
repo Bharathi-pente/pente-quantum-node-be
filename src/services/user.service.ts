@@ -54,10 +54,14 @@ export class UserService {
     }
   }
 
-  async findAll(orgId: string, page = 1, limit = 10, search?: string, filters?: any) {
+  async findAllByCreator(creatorId: string, page = 1, limit = 10, search?: string, filters?: any) {
     const skip = (page - 1) * limit;
 
-    const where: any = { org_id: orgId };
+    const where: any = {
+      organizations: {
+        created_by: creatorId
+      }
+    };
 
     if (search) {
       where.OR = [
@@ -85,6 +89,11 @@ export class UserService {
             select: {
               name: true,
               description: true,
+            },
+          },
+          organizations: {
+            select: {
+              name: true,
             },
           },
         },

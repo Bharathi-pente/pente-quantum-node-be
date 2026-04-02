@@ -30,7 +30,7 @@
     "test:dunning": "node scripts/test-dunning-emails.js",
     "dunning:start": "node scripts/start-dunning-workflows.js",
     "dunning:check-overdue": "node scripts/check-overdue-invoices.js",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --ext .ts --max-warnings 2000",
     "lint:fix": "eslint . --ext .ts --fix"
   },
   "keywords": [

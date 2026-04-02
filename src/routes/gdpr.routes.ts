@@ -137,7 +137,7 @@ router.post('/', async (req: AuthRequest, res) => {
  * @desc    Update GDPR request status
  * @access  Private (admin only)
  */
-router.put('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const { status, notes } = req.body;
 

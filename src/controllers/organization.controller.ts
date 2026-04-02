@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../types/auth';
 import organizationService from '../services/organization.service';
 import ApiResponse from '../utils/ApiResponse';
@@ -39,8 +39,8 @@ export class OrganizationController {
    *       201:
    *         description: Organization created successfully
    */
-  create = asyncHandler(async (req: Request, res: Response) => {
-    const organization = await organizationService.create(req.body);
+  create = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const organization = await organizationService.create(req.body, req);
     res.status(201).json(ApiResponse.success(organization, 'Organization created successfully'));
   });
 
@@ -83,7 +83,7 @@ export class OrganizationController {
       filters.status = req.query.status;
     }
 
-    const { organizations, total } = await organizationService.findAll(undefined, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
+    const { organizations, total } = await organizationService.findAll(req.user, page, limit, search, Object.keys(filters).length > 0 ? filters : undefined);
     res.json(ApiResponse.paginated(organizations, page, limit, total));
   });
 
@@ -104,7 +104,7 @@ export class OrganizationController {
    *         description: Organization details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const organization = await organizationService.findById(req.params.id);
+    const organization = await organizationService.findById(req.params.id, req.user);
     res.json(ApiResponse.success(organization));
   });
 
@@ -125,7 +125,7 @@ export class OrganizationController {
    *         description: Organization updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const organization = await organizationService.update(req.params.id, req.body);
+    const organization = await organizationService.update(req.params.id, req.body, req.user);
     res.json(ApiResponse.success(organization, 'Organization updated successfully'));
   });
 
@@ -167,7 +167,7 @@ export class OrganizationController {
    *         description: Organization deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await organizationService.delete(req.params.id);
+    await organizationService.delete(req.params.id, req.user);
     res.json(ApiResponse.success(null, 'Organization deleted successfully'));
   });
 }
