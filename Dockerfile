@@ -7,6 +7,37 @@
 #
 # ═══════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════
+# Stage 1: Builder
+# ═══════════════════════════════════════════════════════════
+FROM node:20-alpine AS builder
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl libc6-compat
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including dev dependencies for building)
+RUN npm ci
+
+# Copy Prisma schema and generate client
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copy TypeScript source and config
+COPY tsconfig.json ./
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# ═══════════════════════════════════════════════════════════
+# Stage 2: Production
+# ═══════════════════════════════════════════════════════════
 FROM node:20-alpine
 
 # Install dumb-init and OpenSSL for Prisma
@@ -18,33 +49,21 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
+# Install only production dependencies
 RUN npm ci --omit=dev
 
-# Copy Prisma schema
+# Copy Prisma schema and generate client
 COPY prisma ./prisma
-
-# Generate Prisma Client
 RUN npx prisma generate
 
-# Install dev dependencies temporarily for build
-RUN npm ci
-
-# Copy TypeScript source and config
-COPY tsconfig.json ./
-COPY src ./src
-
-# Build TypeScript
-RUN npm run build
-
-# Remove dev dependencies
-RUN npm prune --omit=dev
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     mkdir -p /app/logs && \
-    chown nodejs:nodejs /app/logs
+    chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
