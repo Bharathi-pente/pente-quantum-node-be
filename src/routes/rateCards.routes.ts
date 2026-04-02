@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { PricingModelController } from '../controllers/pricingModel.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createPricingModelSchema,
   updatePricingModelSchema,
@@ -10,7 +12,9 @@ import {
 const router = Router();
 const pricingModelController = new PricingModelController();
 
-// Keycloak authentication removed — routes are unprotected by Keycloak
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @route   POST /api/v1/rate-cards
