@@ -26,11 +26,14 @@ export class UsageLimitService {
 
   // Usage Limits CRUD
   async create(data: any, orgId: string, _userId?: string) {
-    // Validate product exists and belongs to the org.
+    // Validate product exists and belongs to the org (or has no org_id for backward compatibility)
     const product = await prisma.products.findFirst({
       where: {
         id: data.product_id,
-        org_id: orgId,
+        OR: [
+          { org_id: orgId },
+          { org_id: null },
+        ],
       },
     });
 
@@ -38,11 +41,14 @@ export class UsageLimitService {
       throw ApiError.notFound('Product not found');
     }
 
-    // Validate meter exists and belongs to the org.
+    // Validate meter exists and belongs to the org (or has no org_id for backward compatibility)
     const meter = await prisma.meters.findFirst({
       where: {
         id: data.meter_id,
-        org_id: orgId,
+        OR: [
+          { org_id: orgId },
+          { org_id: null },
+        ],
       },
     });
 
@@ -99,13 +105,15 @@ export class UsageLimitService {
 
     const where: any = {};
     
-    // Filter by orgId
+    // Filter by orgId - include products with matching org_id or null org_id for backward compatibility
     if (orgId) {
       where.products = {
-        org_id: orgId,
+        OR: [
+          { org_id: orgId },
+          { org_id: null },
+        ],
       };
     }
-    console.log('[UsageLimitService.findAll] Filtering by orgId:', orgId);
 
     // If customer_id is provided, filter by customer's products
     if (filters.customer_id) {
@@ -139,8 +147,6 @@ export class UsageLimitService {
       where.status = filters.status;
     }
 
-    console.log('[UsageLimitService.findAll] Final where clause:', JSON.stringify(where, null, 2));
-
     const [usageLimits, total] = await Promise.all([
       prisma.usage_limits.findMany({
         where,
@@ -168,9 +174,6 @@ export class UsageLimitService {
       prisma.usage_limits.count({ where }),
     ]);
 
-    console.log('[UsageLimitService.findAll] Found usageLimits:', usageLimits.length);
-    console.log('[UsageLimitService.findAll] Total count:', total);
-
     return {
       usageLimits,
       pagination: {
@@ -187,7 +190,10 @@ export class UsageLimitService {
       where: {
         id,
         products: {
-          org_id: orgId,
+          OR: [
+            { org_id: orgId },
+            { org_id: null },
+          ],
         },
       },
       include: {
@@ -220,7 +226,10 @@ export class UsageLimitService {
       where: {
         id,
         products: {
-          org_id: orgId,
+          OR: [
+            { org_id: orgId },
+            { org_id: null },
+          ],
         },
       },
     });
@@ -264,7 +273,10 @@ export class UsageLimitService {
       where: {
         id,
         products: {
-          org_id: orgId,
+          OR: [
+            { org_id: orgId },
+            { org_id: null },
+          ],
         },
       },
     });

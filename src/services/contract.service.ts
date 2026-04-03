@@ -105,36 +105,41 @@ export class ContractService {
       ];
     }
 
-    const [contracts, total] = await Promise.all([
-      prisma.contracts.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          customers: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [contracts, totalResult] = await Promise.all([
+        tx.contracts.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          include: {
+            customers: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
             },
+            rate_cards: false, // Explicitly exclude to return null
           },
-          rate_cards: false, // Explicitly exclude to return null
-        },
-      }),
-      prisma.contracts.count({
-        where: where,
-      }),
-    ]);
+        }),
+        tx.contracts.count({
+          where: where,
+        }),
+      ]);
+
+      return { contracts, total: totalResult };
+    });
 
     return {
-      data: contracts,
+      data: result.contracts,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page < Math.ceil(total / limit),
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit),
+        hasNextPage: page < Math.ceil(result.total / limit),
         hasPreviousPage: page > 1,
       },
     };

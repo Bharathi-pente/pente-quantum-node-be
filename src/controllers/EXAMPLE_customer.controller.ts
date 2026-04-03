@@ -8,15 +8,13 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/database'; // ✅ Use singleton instance
 import { 
   applyCustomerFilter, 
   getOrgIdForCreate,
   canAccessResource 
 } from '@/utils/queryFilters';
 import { getOrgContext } from '@/middleware/orgContext.middleware';
-
-const prisma = new PrismaClient();
 
 // ============================================
 // GET /api/customers - List all customers

@@ -39,35 +39,40 @@ export class AlertsService {
       where.alert_type = filters.alert_type;
     }
 
-    const [alerts, total] = await Promise.all([
-      prisma.alerts.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          alert_channel_map: {
-            include: {
-              alert_channels: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [alerts, totalResult] = await Promise.all([
+        tx.alerts.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          include: {
+            alert_channel_map: {
+              include: {
+                alert_channels: true,
+              },
+            },
+            _count: {
+              select: {
+                alert_history: true,
+              },
             },
           },
-          _count: {
-            select: {
-              alert_history: true,
-            },
-          },
-        },
-      }),
-      prisma.alerts.count({ where }),
-    ]);
+        }),
+        tx.alerts.count({ where }),
+      ]);
+
+      return { alerts, total: totalResult };
+    });
 
     return {
-      alerts,
+      alerts: result.alerts,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit),
+        total: result.total,
+        pages: Math.ceil(result.total / limit),
       },
     };
   }

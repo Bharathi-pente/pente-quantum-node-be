@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest } from '../types/auth';
 import { dataRetentionService } from '../services/data-retention.service';
+import logger from '../config/logger';
 // Keycloak authentication removed — routes are unprotected by Keycloak
 
 const router = Router();
@@ -50,7 +51,7 @@ router.get('/', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error fetching data retention policies:', error);
+    logger.error('Error fetching data retention policies:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve data retention policies'
@@ -83,7 +84,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error fetching data retention stats:', error);
+    logger.error('Error fetching data retention stats:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve data retention statistics'
@@ -152,7 +153,7 @@ router.post('/', async (req: AuthRequest, res) => {
       message: 'Data retention policy created successfully'
     });
   } catch (error) {
-    console.error('Error creating data retention policy:', error);
+    logger.error('Error creating data retention policy:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to create data retention policy'
@@ -204,7 +205,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error updating data retention policy:', error);
+    logger.error('Error updating data retention policy:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update data retention policy'
@@ -239,7 +240,7 @@ router.post('/:id/review', async (req: AuthRequest, res) => {
       message: 'Data retention policy reviewed successfully'
     });
   } catch (error) {
-    console.error('Error reviewing data retention policy:', error);
+    logger.error('Error reviewing data retention policy:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to review data retention policy'
@@ -284,7 +285,7 @@ router.post('/cleanup', async (req: AuthRequest, res) => {
       message: dryRun ? 'Data cleanup simulation completed' : 'Data cleanup executed successfully'
     });
   } catch (error) {
-    console.error('Error executing data cleanup:', error);
+    logger.error('Error executing data cleanup:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to execute data cleanup'

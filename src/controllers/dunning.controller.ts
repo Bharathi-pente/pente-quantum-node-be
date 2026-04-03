@@ -3,9 +3,9 @@ import { AuthRequest } from '../types/auth';
 import dunningService from '../services/dunning.service';
 import { dunningWorkflowService } from '../services/dunning.workflow.service';
 import { dunningSchedulerService } from '../services/dunning.scheduler.service';
+import { InvoiceService } from '../services/invoice.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
-import prisma from '../config/database';
 
 /**
  * @swagger
@@ -502,20 +502,9 @@ export class DunningController {
       return res.status(400).json(ApiResponse.error('Organization ID not found'));
     }
 
-    // Get invoice details
-    const invoice = await prisma.invoices.findFirst({
-      where: { id: invoiceId },
-      include: {
-        customers: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            org_id: true,
-          },
-        },
-      },
-    });
+    // Get invoice details using service
+    const invoiceService = new InvoiceService();
+    const invoice = await invoiceService.findById(invoiceId, orgId);
 
     if (!invoice) {
       return res.status(404).json(ApiResponse.error('Invoice not found'));

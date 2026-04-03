@@ -26,36 +26,38 @@ export class DunningSchedulerService {
     try {
       const now = new Date();
 
-      // Find all overdue invoices that don't have active dunning workflows
-      const overdueInvoices = await prisma.invoices.findMany({
-        where: {
-          status: 'pending',
-          due_date: {
-            lt: now,
+      // Use transaction and limit batch size to prevent connection exhaustion
+      const overdueInvoices = await prisma.$transaction(async (tx) => {
+        return await tx.invoices.findMany({
+          where: {
+            status: 'pending',
+            due_date: {
+              lt: now,
+            },
+            // Only process invoices that haven't started dunning yet
+            dunning_step: null,
           },
-          // Only process invoices that haven't started dunning yet
-          dunning_step: null,
-        },
-        include: {
-          customers: {
-            include: {
-              organizations: {
-                include: {
-                  dunning_policies: {
-                    where: {
-                      OR: [
-                        { is_default: true },
-                        { status: 'active' },
-                      ],
-                    },
-                    orderBy: {
-                      is_default: 'desc', // Prioritize default policy
-                    },
-                    take: 1,
-                    include: {
-                      dunning_steps: {
-                        orderBy: {
-                          sort_order: 'asc',
+          include: {
+            customers: {
+              include: {
+                organizations: {
+                  include: {
+                    dunning_policies: {
+                      where: {
+                        OR: [
+                          { is_default: true },
+                          { status: 'active' },
+                        ],
+                      },
+                      orderBy: {
+                        is_default: 'desc', // Prioritize default policy
+                      },
+                      take: 1,
+                      include: {
+                        dunning_steps: {
+                          orderBy: {
+                            sort_order: 'asc',
+                          },
                         },
                       },
                     },
@@ -64,7 +66,11 @@ export class DunningSchedulerService {
               },
             },
           },
-        },
+          take: 50, // Limit batch size to prevent memory issues
+          orderBy: {
+            due_date: 'asc', // Process oldest first
+          },
+        });
       });
 
       logger.info(`Found ${overdueInvoices.length} overdue invoices to process`);

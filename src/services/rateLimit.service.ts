@@ -46,26 +46,31 @@ export class RateLimitService {
       where.product_id = filters.product_id;
     }
 
-    const [policies, total] = await Promise.all([
-      prisma.rate_limit_policies.findMany({
-        where,
-        include: {
-          products: {
-            select: {
-              id: true,
-              name: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [policies, totalResult] = await Promise.all([
+        tx.rate_limit_policies.findMany({
+          where,
+          include: {
+            products: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
+            rate_limit_rules: true,
           },
-          rate_limit_rules: true,
-        },
-        skip,
-        take: limit,
-        orderBy: { name: 'asc' },
-      }),
-      prisma.rate_limit_policies.count({ where }),
-    ]);
+          skip,
+          take: limit,
+          orderBy: { name: 'asc' },
+        }),
+        tx.rate_limit_policies.count({ where }),
+      ]);
 
-    return { policies, total };
+      return { policies, total: totalResult };
+    });
+
+    return { policies: result.policies, total: result.total };
   }
 
   /**

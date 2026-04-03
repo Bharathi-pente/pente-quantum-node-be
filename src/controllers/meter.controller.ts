@@ -191,10 +191,7 @@ export class MeterController {
       aggregation: req.query.aggregation as string,
     };
 
-    console.log('Meter getAllAdmin - Admin access - showing all meters');
-
     const result = await meterService.findAll(undefined, page, limit, filters);
-    console.log('Meter getAllAdmin - Result:', result);
     
     res.json(ApiResponse.success(result, 'All meters retrieved successfully'));
   });

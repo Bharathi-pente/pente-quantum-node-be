@@ -135,8 +135,6 @@ export class CustomerController {
       ...req.body,
       org_id: req.user!.orgId,
     };
-    console.log('Creating customer with data:', data);
-    console.log('User orgId:', req.user!.orgId);
     const customer = await customerService.create(data, req);
     res.status(201).json(ApiResponse.success(customer, 'Customer created successfully'));
   });

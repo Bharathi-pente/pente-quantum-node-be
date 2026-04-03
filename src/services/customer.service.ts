@@ -50,14 +50,13 @@ export class CustomerService {
 
     // Validate product_id if provided
     if (data.product_id && data.product_id.trim() !== '') {
-      console.log('Validating product_id:', data.product_id);
       const product = await prisma.products.findFirst({
         where: {
           id: data.product_id,
+          org_id: data.org_id,
           status: 'active',
         },
       });
-      console.log('Product found:', !!product);
       if (!product) {
         throw ApiError.badRequest('Invalid product ID or product is not active');
       }
@@ -110,8 +109,6 @@ export class CustomerService {
       if (data.phone && data.phone.trim() !== '') {
         customerData.phone = data.phone;
       }
-
-      console.log('Final customerData to insert:', customerData);
 
       const customer = await prisma.customers.create({
         data: customerData,
@@ -188,48 +185,53 @@ export class CustomerService {
       ];
     }
 
-    const [customers, total] = await Promise.all([
-      prisma.customers.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        select: {
-          id: true,
-          org_id: true,
-          name: true,
-          email: true,
-          product_id: true,
-          status: true,
-          mrr: true,
-          credit_balance: true,
-          health_score: true,
-          primary_contact: true,
-          phone: true,
-          billing_currency: true,
-          billing_cycle: true,
-          logo_initials: true,
-          created_at: true,
-          updated_at: true,
-          products: {
-            select: {
-              name: true,
-              base_price: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [customers, totalResult] = await Promise.all([
+        tx.customers.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          select: {
+            id: true,
+            org_id: true,
+            name: true,
+            email: true,
+            product_id: true,
+            status: true,
+            mrr: true,
+            credit_balance: true,
+            health_score: true,
+            primary_contact: true,
+            phone: true,
+            billing_currency: true,
+            billing_cycle: true,
+            logo_initials: true,
+            created_at: true,
+            updated_at: true,
+            products: {
+              select: {
+                name: true,
+                base_price: true,
+              },
             },
           },
-        },
-      }),
-      prisma.customers.count({ where }),
-    ]);
+        }),
+        tx.customers.count({ where }),
+      ]);
+
+      return { customers, total: totalResult };
+    });
 
     return {
-      data: customers,
+      data: result.customers,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page < Math.ceil(total / limit),
+        total: result.total,
+        totalPages: Math.ceil(result.total / limit),
+        hasNextPage: page < Math.ceil(result.total / limit),
         hasPreviousPage: page > 1,
       },
     };

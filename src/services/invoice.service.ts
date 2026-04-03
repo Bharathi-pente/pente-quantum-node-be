@@ -202,33 +202,38 @@ export class InvoiceService {
       };
     }
 
-    const [invoices, total] = await Promise.all([
-      prisma.invoices.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          customers: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [invoices, totalResult] = await Promise.all([
+        tx.invoices.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          include: {
+            customers: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            payment_methods: {
+              select: {
+                id: true,
+                method_type: true,
+                last4: true,
+              },
             },
           },
-          payment_methods: {
-            select: {
-              id: true,
-              method_type: true,
-              last4: true,
-            },
-          },
-        },
-      }),
-      prisma.invoices.count({ where }),
-    ]);
+        }),
+        tx.invoices.count({ where }),
+      ]);
 
-    return { invoices, total, page, limit };
+      return { invoices, total: totalResult };
+    });
+
+    return { invoices: result.invoices, total: result.total, page, limit };
   }
 
   async findById(id: string, orgId: string) {
@@ -245,6 +250,7 @@ export class InvoiceService {
             id: true,
             name: true,
             email: true,
+            org_id: true,
             mrr: true,
           },
         },

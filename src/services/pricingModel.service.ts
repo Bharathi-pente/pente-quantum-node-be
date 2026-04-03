@@ -33,11 +33,14 @@ export class PricingModelService {
       throw ApiError.conflict('Pricing model with this name already exists for this organization');
     }
 
-    // Verify meter belongs to org
+    // Verify meter exists and belongs to org (or has no org_id for backward compatibility)
     const meter = await prisma.meters.findFirst({
       where: {
         id: data.meter_id,
-        org_id: orgId,
+        OR: [
+          { org_id: orgId },
+          { org_id: null },
+        ],
       },
     });
 
@@ -96,31 +99,36 @@ export class PricingModelService {
       ];
     }
 
-    const [pricingModels, total] = await Promise.all([
-      prisma.pricing_models.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          meters: {
-            select: {
-              id: true,
-              name: true,
-              event_type: true,
+    // Use a single transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [pricingModels, totalResult] = await Promise.all([
+        tx.pricing_models.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          include: {
+            meters: {
+              select: {
+                id: true,
+                name: true,
+                event_type: true,
+              },
+            },
+            pricing_tiers: {
+              orderBy: {
+                sort_order: 'asc',
+              },
             },
           },
-          pricing_tiers: {
-            orderBy: {
-              sort_order: 'asc',
-            },
-          },
-        },
-      }),
-      prisma.pricing_models.count({ where }),
-    ]);
+        }),
+        tx.pricing_models.count({ where }),
+      ]);
 
-    return { pricingModels, total, page, limit };
+      return { pricingModels, total: totalResult };
+    });
+
+    return { pricingModels: result.pricingModels, total: result.total, page, limit };
   }
 
   async findById(id: string, orgId: string) {
@@ -173,12 +181,15 @@ export class PricingModelService {
       }
     }
 
-    // Verify meter belongs to org if meter_id is being updated
+    // Verify meter belongs to org if meter_id is being updated (or has no org_id for backward compatibility)
     if (data.meter_id) {
       const meter = await prisma.meters.findFirst({
         where: {
           id: data.meter_id,
-          org_id: orgId,
+          OR: [
+            { org_id: orgId },
+            { org_id: null },
+          ],
         },
       });
 

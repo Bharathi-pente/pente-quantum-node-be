@@ -181,50 +181,55 @@ export class PaymentService {
       }
     }
 
-    const [payments, total] = await Promise.all([
-      prisma.payments.findMany({
-        where,
-        include: {
-          customers: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [payments, totalResult] = await Promise.all([
+        tx.payments.findMany({
+          where,
+          include: {
+            customers: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            invoices: {
+              select: {
+                id: true,
+                invoice_number: true,
+                total: true,
+                status: true,
+              },
+            },
+            payment_methods: {
+              select: {
+                id: true,
+                method_type: true,
+                last4: true,
+                brand: true,
+              },
             },
           },
-          invoices: {
-            select: {
-              id: true,
-              invoice_number: true,
-              total: true,
-              status: true,
-            },
+          orderBy: {
+            payment_date: 'desc',
           },
-          payment_methods: {
-            select: {
-              id: true,
-              method_type: true,
-              last4: true,
-              brand: true,
-            },
-          },
-        },
-        orderBy: {
-          payment_date: 'desc',
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.payments.count({ where }),
-    ]);
+          skip,
+          take: limit,
+        }),
+        tx.payments.count({ where }),
+      ]);
+
+      return { payments, total: totalResult };
+    });
 
     return {
-      payments,
+      payments: result.payments,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit),
+        total: result.total,
+        pages: Math.ceil(result.total / limit),
       },
     };
   }

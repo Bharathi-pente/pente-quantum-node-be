@@ -98,31 +98,36 @@ export class EntitlementService {
       }
     }
 
-    const [grants, total] = await Promise.all([
-      prisma.entitlement_grants.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { granted_at: 'desc' },
-        include: {
-          customers: {
-            select: {
-              id: true,
-              name: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [grants, totalResult] = await Promise.all([
+        tx.entitlement_grants.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { granted_at: 'desc' },
+          include: {
+            customers: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            features: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-          features: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      }),
-      prisma.entitlement_grants.count({ where }),
-    ]);
+        }),
+        tx.entitlement_grants.count({ where }),
+      ]);
 
-    return { grants, total, page, limit };
+      return { grants, total: totalResult };
+    });
+
+    return { grants: result.grants, total: result.total, page, limit };
   }
 
   async findGrantById(id: string, orgId: string) {

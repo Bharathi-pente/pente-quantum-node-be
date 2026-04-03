@@ -52,17 +52,22 @@ export class MeterService {
       ];
     }
 
-    const [meters, total] = await Promise.all([
-      prisma.meters.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-      }),
-      prisma.meters.count({ where }),
-    ]);
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const [meters, totalResult] = await Promise.all([
+        tx.meters.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+        }),
+        tx.meters.count({ where }),
+      ]);
 
-    return { meters, total, page, limit };
+      return { meters, total: totalResult };
+    });
+
+    return { meters: result.meters, total: result.total, page, limit };
   }
 
   async findById(id: string, orgId: string) {

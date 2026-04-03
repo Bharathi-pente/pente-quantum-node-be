@@ -3,6 +3,7 @@
 
 import axios from 'axios';
 import KC from '../config/keycloak.config';
+import logger from '../config/logger';
 
 interface KeycloakTokenResponse {
   access_token: string;
@@ -56,7 +57,7 @@ async function loginUser(email: string, password: string): Promise<KeycloakToken
     const error = err.response?.data?.error;
 
     // Log the full error for debugging
-    console.error('Keycloak login error:', {
+    logger.error('Keycloak login error:', {
       status,
       error,
       errorDesc,

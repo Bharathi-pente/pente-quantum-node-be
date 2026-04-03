@@ -223,41 +223,56 @@ export class AdminController {
     const aggregation = req.query.aggregation as string | undefined;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, any> = {};
-
-    // Filter by user - meters are now user-specific
+    // Filter by user's organizations - meters belong to organizations
     if (!req.user) {
       return res.status(401).json(ApiResponse.error('Authentication required'));
     }
-    where.created_by = req.user.id;
 
-    if (status) where.status = status;
-    if (eventType) where.event_type = eventType;
-    if (aggregation) where.aggregation = aggregation;
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { event_type: { contains: search, mode: 'insensitive' } },
-        { field: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      // Get user's organizations
+      const userOrgs = await tx.organizations.findMany({
+        where: { created_by: req.user.id },
+        select: { id: true }
+      });
+      
+      const orgIds = userOrgs.map(org => org.id);
+      if (orgIds.length === 0) {
+        return { meters: [], total: 0 };
+      }
+      
+      const where: Record<string, any> = { org_id: { in: orgIds } };
 
-    const [meters, total] = await Promise.all([
-      prisma.meters.findMany({
-        where,
-        include: {
-          organizations: {
-            select: { name: true }
-          }
-        },
-        orderBy: { created_at: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.meters.count({ where })
-    ]);
+      if (status) where.status = status;
+      if (eventType) where.event_type = eventType;
+      if (aggregation) where.aggregation = aggregation;
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { event_type: { contains: search, mode: 'insensitive' } },
+          { field: { contains: search, mode: 'insensitive' } },
+        ];
+      }
 
-    res.json(ApiResponse.paginated(meters, page, limit, total));
+      const [meters, totalResult] = await Promise.all([
+        tx.meters.findMany({
+          where,
+          include: {
+            organizations: {
+              select: { name: true }
+            }
+          },
+          orderBy: { created_at: 'desc' },
+          skip,
+          take: limit
+        }),
+        tx.meters.count({ where })
+      ]);
+
+      return { meters, total: totalResult };
+    });
+
+    res.json(ApiResponse.paginated(result.meters, page, limit, result.total));
   });
 
   /**
@@ -273,24 +288,38 @@ export class AdminController {
    *         description: List of all pricing models
    */
   getPricingModels = asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Filter by user - pricing models are now user-specific
+    // Filter by user's organizations - pricing models belong to organizations
     if (!req.user) {
       return res.status(401).json(ApiResponse.error('Authentication required'));
     }
 
-    const pricingModels = await prisma.pricing_models.findMany({
-      where: {
-        created_by: req.user.id
-      },
-      include: {
-        organizations: {
-          select: { name: true }
+    // Use transaction to reduce connection usage
+    const pricingModels = await prisma.$transaction(async (tx) => {
+      // Get user's organizations
+      const userOrgs = await tx.organizations.findMany({
+        where: { created_by: req.user.id },
+        select: { id: true }
+      });
+      
+      const orgIds = userOrgs.map(org => org.id);
+      if (orgIds.length === 0) {
+        return [];
+      }
+
+      return await tx.pricing_models.findMany({
+        where: {
+          org_id: { in: orgIds }
         },
-        meters: {
-          select: { name: true }
-        }
-      },
-      orderBy: { created_at: 'desc' }
+        include: {
+          organizations: {
+            select: { name: true }
+          },
+          meters: {
+            select: { name: true }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
     });
 
     res.json(ApiResponse.success(pricingModels));

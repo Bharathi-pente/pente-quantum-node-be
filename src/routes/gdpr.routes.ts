@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest } from '../types/auth';
 import { gdprService } from '../services/gdpr.service';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.get('/', async (req: AuthRequest, res) => {
       message: 'GDPR requests retrieved successfully'
     });
   } catch (error) {
-    console.error('Error fetching GDPR requests:', error);
+    logger.error('Error fetching GDPR requests:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve GDPR requests'
@@ -67,7 +68,7 @@ router.get('/stats', async (_req: AuthRequest, res) => {
       message: 'GDPR statistics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error fetching GDPR stats:', error);
+    logger.error('Error fetching GDPR stats:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve GDPR statistics'
@@ -124,7 +125,7 @@ router.post('/', async (req: AuthRequest, res) => {
       message: 'GDPR request submitted successfully'
     });
   } catch (error) {
-    console.error('Error creating GDPR request:', error);
+    logger.error('Error creating GDPR request:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to create GDPR request'
@@ -162,7 +163,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error updating GDPR request:', error);
+    logger.error('Error fetching GDPR requests:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update GDPR request'
@@ -195,7 +196,7 @@ router.post('/:id/process', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error processing GDPR request:', error);
+    logger.error('Error processing GDPR request:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to process GDPR request'
@@ -219,7 +220,7 @@ router.get('/overdue', async (_req: AuthRequest, res) => {
       message: 'Overdue GDPR requests retrieved successfully'
     });
   } catch (error) {
-    console.error('Error fetching overdue GDPR requests:', error);
+    logger.error('Error fetching overdue GDPR requests:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve overdue GDPR requests'

@@ -4,7 +4,7 @@ import { Response } from 'express';
 import jwt from 'jsonwebtoken';
 import kcService from '../services/keycloak.service';
 import { AuthRequest } from '../middleware/keycloakAuth.middleware';
-
+import logger from '../config/logger';
 import prisma from '../config/database';
 
 // ─────────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ export async function login(req: AuthRequest, res: Response): Promise<Response |
       },
     });
   } catch (err: any) {
-    console.error('Login error:', err);
+    logger.error('Login error:', err);
     res.status(401).json({ success: false, message: err.message });
   }
 }

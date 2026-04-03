@@ -131,7 +131,7 @@ export class PricingModelController {
     };
 
     const result = await pricingModelService.findAll(orgId, page, limit, filters);
-    res.json(ApiResponse.success(result, 'Pricing models retrieved successfully'));
+    res.json(ApiResponse.paginated(result.pricingModels, result.page, result.limit, result.total));
   });
 
   /**

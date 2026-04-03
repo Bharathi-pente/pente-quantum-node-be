@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthRequest } from '../types/auth';
 import { complianceService } from '../services/compliance.service';
+import logger from '../config/logger';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.get('/', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error fetching compliance reports:', error);
+    logger.error('Error fetching compliance reports:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve compliance reports'
@@ -84,7 +85,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error fetching compliance stats:', error);
+    logger.error('Error fetching compliance stats:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve compliance statistics'
@@ -139,7 +140,7 @@ router.post('/', async (req: AuthRequest, res) => {
       message: 'Compliance report generation started'
     });
   } catch (error) {
-    console.error('Error generating compliance report:', error);
+    logger.error('Error generating compliance report:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to generate compliance report'
@@ -177,7 +178,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
     });
     return;
   } catch (error) {
-    console.error('Error updating compliance report:', error);
+    logger.error('Error updating compliance report:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update compliance report'
@@ -201,7 +202,7 @@ router.get('/:id/download', async (req: AuthRequest, res) => {
       report_id: req.params.id
     });
   } catch (error) {
-    console.error('Error downloading compliance report:', error);
+    logger.error('Error downloading compliance report:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to download compliance report'

@@ -127,56 +127,63 @@ export class OrganizationService {
       // Add more filters as needed
     }
 
-    const organizations = await prisma.organizations.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { created_at: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        billing_email: true,
-        status: true,
-        settings: true,
-        created_by: true,
-        created_at: true,
-        updated_at: true,
-        _count: {
-          select: {
-            customers: true,
+    // Use transaction to reduce connection usage
+    const result = await prisma.$transaction(async (tx) => {
+      const organizations = await tx.organizations.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          billing_email: true,
+          status: true,
+          settings: true,
+          created_by: true,
+          created_at: true,
+          updated_at: true,
+          _count: {
+            select: {
+              customers: true,
+            },
           },
         },
-      },
+      });
+
+      const total = await tx.organizations.count({ where });
+
+      // Get MRR sums for these organizations
+      const orgIds = organizations.map(org => org.id);
+      const mrrSums = await tx.customers.groupBy({
+        by: ['org_id'],
+        where: {
+          org_id: { in: orgIds },
+          status: 'active', // Only count active customers
+        },
+        _sum: {
+          mrr: true,
+        },
+      });
+
+      // Get events count for last 30 days per organization
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const eventsCounts = await tx.usage_events.groupBy({
+        by: ['org_id'],
+        where: {
+          org_id: { in: orgIds },
+          created_at: { gte: thirtyDaysAgo }
+        },
+        _count: {
+          id: true,
+        },
+      });
+
+      return { organizations, total, mrrSums, eventsCounts };
     });
 
-    const total = await prisma.organizations.count({ where });
-
-    // Get MRR sums for these organizations
-    const orgIds = organizations.map(org => org.id);
-    const mrrSums = await prisma.customers.groupBy({
-      by: ['org_id'],
-      where: {
-        org_id: { in: orgIds },
-        status: 'active', // Only count active customers
-      },
-      _sum: {
-        mrr: true,
-      },
-    });
-
-    // Get events count for last 30 days per organization
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const eventsCounts = await prisma.usage_events.groupBy({
-      by: ['org_id'],
-      where: {
-        org_id: { in: orgIds },
-        created_at: { gte: thirtyDaysAgo }
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const { organizations, total, mrrSums, eventsCounts } = result;
 
     // Create maps
     const mrrMap = new Map<string, number>();
