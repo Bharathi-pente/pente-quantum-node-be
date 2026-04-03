@@ -6,7 +6,16 @@ export class CurrencyService {
   /**
    * Get currency configuration for organization
    */
-  static async getCurrencyConfig(orgId: string) {
+  static async getCurrencyConfig(orgId: string): Promise<{
+    id?: string;
+    base_currency: string;
+    supported_currencies: string[];
+    exchange_rates: Record<string, number>;
+    auto_update_rates: boolean;
+    last_updated?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  }> {
     const config = await prisma.currency_configs.findFirst({
       where: { org_id: orgId }
     });
@@ -26,7 +35,7 @@ export class CurrencyService {
       id: config.id,
       base_currency: config.base_currency,
       supported_currencies: config.supported_currencies,
-      exchange_rates: config.exchange_rates || {},
+      exchange_rates: (config.exchange_rates as Record<string, number>) || {},
       auto_update_rates: config.auto_update_rates,
       last_updated: config.last_updated?.toISOString(),
       created_at: config.created_at.toISOString(),

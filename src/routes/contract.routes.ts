@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import contractController from '../controllers/contract.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createContractSchema,
   updateContractSchema,
@@ -9,6 +11,10 @@ import {
 } from '../validators/contract.validator';
 
 const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @route   POST /api/v1/contracts

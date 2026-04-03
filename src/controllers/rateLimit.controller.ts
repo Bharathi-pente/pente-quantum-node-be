@@ -59,12 +59,12 @@ export class RateLimitController {
    *         description: Policy created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
-    const policy = await rateLimitService.create(req.body, orgId);
+
+    const policy = await rateLimitService.create(req.body, req.user);
     res.status(201).json(ApiResponse.success(policy, 'Rate limit policy created successfully'));
   });
 
@@ -103,19 +103,20 @@ export class RateLimitController {
    *         description: List of rate limit policies
    */
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
     const filters = {
       status: req.query.status as string,
       product_id: req.query.product_id as string,
     };
 
-    const { policies, total } = await rateLimitService.findAll(orgId, page, limit, filters);
+    const { policies, total } = await rateLimitService.findAll(req.user, page, limit, filters);
     res.json(ApiResponse.paginated(policies, page, limit, total));
   });
 
@@ -139,12 +140,12 @@ export class RateLimitController {
    *         description: Policy details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
-    const policy = await rateLimitService.findById(req.params.id, orgId);
+
+    const policy = await rateLimitService.findById(req.params.id, req.user);
     res.json(ApiResponse.success(policy));
   });
 
@@ -184,12 +185,12 @@ export class RateLimitController {
    *         description: Policy updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
-    const policy = await rateLimitService.update(req.params.id, req.body, orgId);
+
+    const policy = await rateLimitService.update(req.params.id, req.body, req.user);
     res.json(ApiResponse.success(policy, 'Rate limit policy updated successfully'));
   });
 
@@ -213,12 +214,12 @@ export class RateLimitController {
    *         description: Policy deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
-    await rateLimitService.delete(req.params.id, orgId);
+
+    await rateLimitService.delete(req.params.id, req.user);
     res.json(ApiResponse.success(null, 'Rate limit policy deleted successfully'));
   });
 
@@ -253,7 +254,15 @@ export class RateLimitController {
    *       200:
    *         description: Rate limit metrics retrieved successfully
    */
-  getMetrics = asyncHandler(async (_req: AuthRequest, res: Response) => {
+  getMetrics = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orgId = req.user?.orgId;
+    const isSuperAdmin = req.user?.roles?.includes('super_admin') ?? false;
+
+    if (!orgId && !isSuperAdmin) {
+      res.status(403).json(ApiResponse.error('Organization access required for rate limit metrics'));
+      return;
+    }
+
     // TODO: Implement real metrics calculation from database/logs using req.query filters
     // const { start_date, end_date, product_id } = req.query;
     // const orgId = req.user!.orgId;
@@ -305,12 +314,12 @@ export class RateLimitController {
    *         description: List of policies for the product
    */
   getByProduct = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    if (!req.user) {
+      res.status(401).json(ApiResponse.error('Authentication required'));
       return;
     }
-    const policies = await rateLimitService.findByProduct(req.params.productId, orgId);
+
+    const policies = await rateLimitService.findByProduct(req.params.productId, req.user);
     res.json(ApiResponse.success(policies));
   });
 }

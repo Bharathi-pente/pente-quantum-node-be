@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import usageLimitController from '../controllers/usageLimit.controller';
-// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createUsageLimitSchema,
@@ -16,6 +17,10 @@ import {
 } from '../validators/usageLimit.validator';
 
 const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @swagger

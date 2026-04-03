@@ -100,7 +100,7 @@ export class AuditController {
    *                   $ref: '#/components/schemas/PaginationMeta'
    */
   getAuditLogs = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    const orgId = req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string;
     if (!orgId) {
       res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
       return;

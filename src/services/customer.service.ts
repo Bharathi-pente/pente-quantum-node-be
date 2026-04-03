@@ -48,6 +48,25 @@ export class CustomerService {
       throw ApiError.conflict('Customer with this email already exists in your organization');
     }
 
+    // Validate product_id if provided
+    if (data.product_id && data.product_id.trim() !== '') {
+      console.log('Validating product_id:', data.product_id);
+      const product = await prisma.products.findFirst({
+        where: {
+          id: data.product_id,
+          status: 'active',
+        },
+      });
+      console.log('Product found:', !!product);
+      if (!product) {
+        throw ApiError.badRequest('Invalid product ID or product is not active');
+      }
+    }
+
+    // Note: rate_card_override validation removed due to schema mismatch
+    // Frontend gets "rate cards" from pricing_models endpoint but schema references rate_cards table
+    // TODO: Fix schema or create proper rate cards endpoint
+
     // Generate logo initials
     const logo_initials = data.name
       .split(' ')
@@ -57,23 +76,45 @@ export class CustomerService {
       .substring(0, 2);
 
     try {
+      // Prepare customer data, excluding empty/undefined optional fields
+      const customerData: any = {
+        org_id: data.org_id,
+        name: data.name,
+        email: data.email,
+        status: data.status || 'active',
+        mrr: data.mrr || 0,
+        credit_balance: data.credit_balance || 0,
+        health_score: data.health_score || 75,
+        billing_currency: data.billing_currency || 'USD',
+        billing_cycle: data.billing_cycle || 'monthly',
+        logo_initials,
+      };
+
+      // Only include product_id if it's a valid non-empty value
+      if (data.product_id && data.product_id.trim() !== '') {
+        customerData.product_id = data.product_id;
+      }
+
+      // TODO: rate_card_override removed due to schema mismatch
+      // Frontend sends pricing_model IDs but schema expects rate_cards IDs
+      // if (data.rate_card_override && data.rate_card_override.trim() !== '') {
+      //   customerData.rate_card_override = data.rate_card_override;
+      // }
+
+      // Only include primary_contact if provided
+      if (data.primary_contact && data.primary_contact.trim() !== '') {
+        customerData.primary_contact = data.primary_contact;
+      }
+
+      // Only include phone if provided
+      if (data.phone && data.phone.trim() !== '') {
+        customerData.phone = data.phone;
+      }
+
+      console.log('Final customerData to insert:', customerData);
+
       const customer = await prisma.customers.create({
-        data: {
-          org_id: data.org_id,
-          name: data.name,
-          email: data.email,
-          product_id: data.product_id,
-          rate_card_override: data.rate_card_override,
-          status: data.status || 'active',
-          mrr: data.mrr || 0,
-          credit_balance: data.credit_balance || 0,
-          health_score: data.health_score || 75,
-          primary_contact: data.primary_contact,
-          phone: data.phone,
-          billing_currency: data.billing_currency || 'USD',
-          billing_cycle: data.billing_cycle || 'monthly',
-          logo_initials,
-        },
+        data: customerData,
         include: {
           products: {
             select: {
@@ -81,11 +122,7 @@ export class CustomerService {
               base_price: true,
             },
           },
-          rate_cards: {
-            select: {
-              name: true,
-            },
-          },
+          // rate_cards include removed due to schema mismatch
         },
       });
 
@@ -99,6 +136,7 @@ export class CustomerService {
         {
           email: data.email,
           product_id: data.product_id,
+          // rate_card_override: data.rate_card_override, // Removed due to schema mismatch
           status: data.status || 'active',
           mrr: data.mrr || 0,
           billing_currency: data.billing_currency || 'USD',
@@ -184,7 +222,17 @@ export class CustomerService {
       prisma.customers.count({ where }),
     ]);
 
-    return { customers, total, page, limit };
+    return {
+      data: customers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   /**

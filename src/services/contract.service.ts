@@ -29,12 +29,12 @@ export class ContractService {
       throw ApiError.notFound('Customer not found or does not belong to your organization');
     }
 
-    // Verify rate card exists if provided
+    // Verify rate card exists if provided (checks pricing_models since frontend sends pricing model IDs)
     if (data.rate_card_id) {
-      const rateCard = await prisma.rate_cards.findUnique({
+      const pricingModel = await prisma.pricing_models.findUnique({
         where: { id: data.rate_card_id },
       });
-      if (!rateCard) {
+      if (!pricingModel) {
         throw ApiError.notFound('Rate card not found');
       }
     }
@@ -52,7 +52,7 @@ export class ContractService {
           commit_amount: data.commit_amount || 0,
           used_amount: data.used_amount || 0,
           remaining_amount: data.remaining_amount || 0,
-          rate_card_id: data.rate_card_id || null,
+          // rate_card_id: data.rate_card_id || null, // Temporarily disabled due to schema mismatch
           auto_renew: data.auto_renew || false,
           payment_terms: data.payment_terms || 'Net 30',
           amendment_count: data.amendment_count || 0,
@@ -65,12 +65,7 @@ export class ContractService {
               email: true,
             },
           },
-          rate_cards: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          rate_cards: false, // Explicitly exclude to return null
         },
       });
     } catch (error: any) {
@@ -84,11 +79,14 @@ export class ContractService {
 
   async findAll(orgId: string, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
-    const where: any = {
-      customers: {
+    const where: any = {};
+
+    // Only filter by org_id if user is not a super admin (orgId is not null)
+    if (orgId !== null) {
+      where.customers = {
         org_id: orgId,
-      },
-    };
+      };
+    }
 
     if (filters?.status) {
       where.status = filters.status;
@@ -121,35 +119,39 @@ export class ContractService {
               email: true,
             },
           },
-          rate_cards: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          rate_cards: false, // Explicitly exclude to return null
         },
       }),
       prisma.contracts.count({
-        where: {
-          customers: {
-            org_id: orgId,
-          },
-          ...where,
-        },
+        where: where,
       }),
     ]);
 
-    return { contracts, total, page, limit };
+    return {
+      data: contracts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async findById(id: string, orgId: string) {
+    const where: any = { id };
+
+    // Only filter by org_id if user is not a super admin (orgId is not null)
+    if (orgId !== null) {
+      where.customers = {
+        org_id: orgId,
+      };
+    }
+
     const contract = await prisma.contracts.findFirst({
-      where: {
-        id,
-        customers: {
-          org_id: orgId,
-        },
-      },
+      where,
       include: {
         customers: {
           select: {
@@ -159,12 +161,7 @@ export class ContractService {
             org_id: true,
           },
         },
-        rate_cards: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        rate_cards: false, // Explicitly exclude to return null
       },
     });
 
@@ -179,12 +176,12 @@ export class ContractService {
     // First verify the contract exists and belongs to the org
     await this.findById(id, orgId);
 
-    // Verify rate card exists if provided
+    // Verify rate card exists if provided (checks pricing_models since frontend sends pricing model IDs)
     if (data.rate_card_id) {
-      const rateCard = await prisma.rate_cards.findUnique({
+      const pricingModel = await prisma.pricing_models.findUnique({
         where: { id: data.rate_card_id },
       });
-      if (!rateCard) {
+      if (!pricingModel) {
         throw ApiError.notFound('Rate card not found');
       }
     }
@@ -202,7 +199,7 @@ export class ContractService {
           ...(data.commit_amount !== undefined && { commit_amount: data.commit_amount }),
           ...(data.used_amount !== undefined && { used_amount: data.used_amount }),
           ...(data.remaining_amount !== undefined && { remaining_amount: data.remaining_amount }),
-          ...(data.rate_card_id !== undefined && { rate_card_id: data.rate_card_id }),
+          // ...(data.rate_card_id !== undefined && { rate_card_id: data.rate_card_id }), // Disabled due to schema mismatch
           ...(data.auto_renew !== undefined && { auto_renew: data.auto_renew }),
           ...(data.payment_terms && { payment_terms: data.payment_terms }),
           ...(data.amendment_count !== undefined && { amendment_count: data.amendment_count }),
@@ -215,12 +212,7 @@ export class ContractService {
               email: true,
             },
           },
-          rate_cards: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          rate_cards: false, // Explicitly exclude to return null
         },
       });
     } catch (error: any) {

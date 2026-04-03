@@ -22,7 +22,7 @@ export const updateCurrencyConfigSchema = z.object({
 
 // Schema for getting currency config
 export const getCurrencyConfigSchema = z.object({
-  query: z.object({}).optional()
+  query: z.record(z.any()).optional()
 });
 
 // Type exports

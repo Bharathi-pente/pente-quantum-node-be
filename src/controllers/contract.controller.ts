@@ -133,7 +133,8 @@ export class ContractController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.user?.orgId!;
+    // Use orgId from params if provided (for admin accessing other orgs), otherwise use user's orgId
+    const orgId = req.params.id || req.user?.orgId || null;
     const filters = {
       status: req.query.status as string,
       contract_type: req.query.contract_type as string,
@@ -141,8 +142,8 @@ export class ContractController {
       search: req.query.search as string,
     };
 
-    const { contracts, total } = await contractService.findAll(orgId, page, limit, filters);
-    res.json(ApiResponse.paginated(contracts, page, limit, total));
+    const result = await contractService.findAll(orgId, page, limit, filters);
+    res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 
   /**

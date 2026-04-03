@@ -8,12 +8,14 @@ export class CreditService {
    */
   static async createCredit(data: CreateCreditInput['body'], orgId: string, _userId: string) {
     try {
-      // Verify customer belongs to organization
+      // Build customer filter - always check customer exists, filter by org if provided
+      const customerWhere: any = { id: data.customer_id };
+      if (orgId) {
+        customerWhere.org_id = orgId;
+      }
+
       const customer = await prisma.customers.findFirst({
-        where: {
-          id: data.customer_id,
-          org_id: orgId
-        },
+        where: customerWhere,
         select: {
           id: true,
           org_id: true,
@@ -31,7 +33,11 @@ export class CreditService {
       });
 
       if (!customer) {
-        throw new ApiError(404, 'Customer not found or does not belong to your organization');
+        if (orgId) {
+          throw new ApiError(404, 'Customer not found or does not belong to your organization');
+        } else {
+          throw new ApiError(404, 'Customer not found');
+        }
       }
 
       // Set remaining amount to original amount if not provided
@@ -97,11 +103,13 @@ export class CreditService {
       const { page = 1, limit = 10, customer_id, status, credit_type } = query;
       const skip = (Number(page) - 1) * Number(limit);
 
-      const where: any = {
-        customers: {
+      const where: any = {};
+
+      if (orgId) {
+        where.customers = {
           org_id: orgId
-        }
-      };
+        };
+      }
 
       if (customer_id) {
         where.customer_id = customer_id;

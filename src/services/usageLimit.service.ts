@@ -2,30 +2,48 @@ import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
 
 export class UsageLimitService {
-  // Usage Limits CRUD
-  async create(data: any, orgId: string | undefined) {
-    // Validate product exists (and optionally belongs to org)
-    const productWhere: any = { id: data.product_id };
+  private buildOwnershipFilter(orgId?: string, userId?: string) {
+    const conditions: any[] = [];
+
     if (orgId) {
-      productWhere.org_id = orgId;
+      conditions.push({ org_id: orgId });
     }
-    
+
+    if (userId) {
+      conditions.push({ created_by: userId });
+    }
+
+    if (conditions.length === 0) {
+      return {};
+    }
+
+    if (conditions.length === 1) {
+      return conditions[0];
+    }
+
+    return { OR: conditions };
+  }
+
+  // Usage Limits CRUD
+  async create(data: any, orgId: string, _userId?: string) {
+    // Validate product exists and belongs to the org.
     const product = await prisma.products.findFirst({
-      where: productWhere,
+      where: {
+        id: data.product_id,
+        org_id: orgId,
+      },
     });
 
     if (!product) {
       throw ApiError.notFound('Product not found');
     }
 
-    // Validate meter exists (and optionally belongs to org)
-    const meterWhere: any = { id: data.meter_id };
-    if (orgId) {
-      meterWhere.org_id = orgId;
-    }
-    
+    // Validate meter exists and belongs to the org.
     const meter = await prisma.meters.findFirst({
-      where: meterWhere,
+      where: {
+        id: data.meter_id,
+        org_id: orgId,
+      },
     });
 
     if (!meter) {
@@ -74,22 +92,20 @@ export class UsageLimitService {
     return usageLimit;
   }
 
-  async findAll(orgId: string | undefined, page: number = 1, limit: number = 10, filters: any = {}) {
+  async findAll(orgId: string, page: number = 1, limit: number = 10, filters: any = {}, _userId?: string) {
     const skip = (page - 1) * limit;
     // First, let's try to get ALL usage limits without any filtering to see if they exist
     await prisma.usage_limits.count();
 
     const where: any = {};
     
-    // Only filter by orgId if it's provided
+    // Filter by orgId
     if (orgId) {
       where.products = {
         org_id: orgId,
       };
-      console.log('[UsageLimitService.findAll] Filtering by orgId:', orgId);
-    } else {
-      console.log('[UsageLimitService.findAll] No orgId filter applied');
     }
+    console.log('[UsageLimitService.findAll] Filtering by orgId:', orgId);
 
     // If customer_id is provided, filter by customer's products
     if (filters.customer_id) {
@@ -166,7 +182,7 @@ export class UsageLimitService {
     };
   }
 
-  async findById(id: string, orgId: string) {
+  async findById(id: string, orgId: string, _userId?: string) {
     const usageLimit = await prisma.usage_limits.findFirst({
       where: {
         id,
@@ -198,15 +214,15 @@ export class UsageLimitService {
     return usageLimit;
   }
 
-  async update(id: string, data: any, orgId: string | undefined) {
+  async update(id: string, data: any, orgId: string, _userId?: string) {
     // Check if usage limit exists and belongs to org
-    const where: any = { id };
-    if (orgId) {
-      where.products = { org_id: orgId };
-    }
-
     const existingLimit = await prisma.usage_limits.findFirst({
-      where,
+      where: {
+        id,
+        products: {
+          org_id: orgId,
+        },
+      },
     });
 
     if (!existingLimit) {
@@ -242,7 +258,7 @@ export class UsageLimitService {
     return usageLimit;
   }
 
-  async delete(id: string, orgId: string) {
+  async delete(id: string, orgId: string, _userId?: string) {
     // Check if usage limit exists and belongs to org
     const usageLimit = await prisma.usage_limits.findFirst({
       where: {
@@ -513,14 +529,14 @@ export class UsageLimitService {
   }
 
   // Real-time usage methods
-  async getCurrentUsage(orgId: string, filters?: any, pagination?: { page: number; limit: number }) {
+  async getCurrentUsage(orgId: string | undefined, filters?: any, pagination?: { page: number; limit: number }, userId?: string) {
     const { page = 1, limit = 10 } = pagination || {};
     // Get all usage limits for the organization
-    const where: any = {
-      products: {
-        org_id: orgId,
-      },
-    };
+    const where: any = {};
+    const productAccessFilter = this.buildOwnershipFilter(orgId, userId);
+    if (Object.keys(productAccessFilter).length > 0) {
+      where.products = productAccessFilter;
+    }
 
     if (filters?.product_id) {
       where.product_id = filters.product_id;
@@ -537,7 +553,10 @@ export class UsageLimitService {
             id: true,
             name: true,
             customers: {
-              where: filters?.customer_id ? { id: filters.customer_id } : undefined,
+              where: {
+                ...(filters?.customer_id ? { id: filters.customer_id } : {}),
+                ...(orgId ? { org_id: orgId } : {}),
+              },
               select: {
                 id: true,
                 name: true,
@@ -620,21 +639,23 @@ export class UsageLimitService {
     };
   }
 
-  async getLimitCurrentUsage(limitId: string, orgId: string) {
+  async getLimitCurrentUsage(limitId: string, orgId: string | undefined, userId?: string) {
     // Get the specific usage limit
+    const where: any = { id: limitId };
+    const productAccessFilter = this.buildOwnershipFilter(orgId, userId);
+    if (Object.keys(productAccessFilter).length > 0) {
+      where.products = productAccessFilter;
+    }
+
     const limit = await prisma.usage_limits.findFirst({
-      where: {
-        id: limitId,
-        products: {
-          org_id: orgId,
-        },
-      },
+      where,
       include: {
         products: {
           select: {
             id: true,
             name: true,
             customers: {
+              where: orgId ? { org_id: orgId } : {},
               select: {
                 id: true,
                 name: true,
@@ -703,8 +724,8 @@ export class UsageLimitService {
     };
   }
 
-  async getUsageStats(orgId: string, filters?: any) {
-    const usageData = await this.getCurrentUsage(orgId, filters, { page: 1, limit: 100000 });
+  async getUsageStats(orgId: string | undefined, filters?: any, userId?: string) {
+    const usageData = await this.getCurrentUsage(orgId, filters, { page: 1, limit: 100000 }, userId);
 
     const totalLimits = usageData.data.length;
     const activeLimits = usageData.data.filter((item: any) => item.status !== 'exceeded').length;

@@ -898,19 +898,54 @@ export class AdminController {
       return res.status(401).json(ApiResponse.error('Authentication required'));
     }
 
-    const products = await prisma.products.findMany({
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.params.orgId || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    
+    if (!orgId) {
+      return res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, or user orgId is required'));
+    }
+
+    const filters = {
+      status: req.query.status as string,
+      search: req.query.search as string,
+    };
+
+    const result = await prisma.products.findMany({
       where: {
-        created_by: req.user.id
+        org_id: orgId,
+        ...(filters.status && { status: filters.status }),
+        ...(filters.search && {
+          OR: [
+            { name: { contains: filters.search, mode: 'insensitive' } },
+            { description: { contains: filters.search, mode: 'insensitive' } },
+          ],
+        }),
       },
       include: {
         organizations: {
           select: { name: true }
         }
       },
+      skip: (page - 1) * limit,
+      take: limit,
       orderBy: { created_at: 'desc' }
     });
 
-    res.json(ApiResponse.success(products));
+    const total = await prisma.products.count({
+      where: {
+        org_id: orgId,
+        ...(filters.status && { status: filters.status }),
+        ...(filters.search && {
+          OR: [
+            { name: { contains: filters.search, mode: 'insensitive' } },
+            { description: { contains: filters.search, mode: 'insensitive' } },
+          ],
+        }),
+      },
+    });
+
+    res.json(ApiResponse.paginated(result, page, limit, total));
   });
 
   /**
@@ -972,3 +1007,8 @@ export class AdminController {
 }
 
 export default new AdminController();
+
+
+
+
+

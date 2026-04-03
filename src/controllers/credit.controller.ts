@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '../types/auth';
 import { CreditService } from '../services/credit.service';
 import ApiResponse from '../utils/ApiResponse';
 import asyncHandler from '../utils/asyncHandler';
@@ -65,10 +66,14 @@ export class CreditController {
    *       404:
    *         description: Customer not found
    */
-  static createCredit = asyncHandler(async (req: Request, res: Response) => {
+  static createCredit = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedData: CreateCreditInput = req as any;
-    const orgId = (req as any).orgId;
-    const userId = (req as any).userId;
+    const orgId = req.user?.orgId;
+    const userId = req.user?.id;
+
+    if (!orgId) {
+      return res.status(403).json(ApiResponse.error('Organization access required for credit creation'));
+    }
 
     const credit = await CreditService.createCredit(validatedData.body, orgId, userId);
 
@@ -116,9 +121,14 @@ export class CreditController {
    *       200:
    *         description: Credits retrieved successfully
    */
-  static getCredits = asyncHandler(async (req: Request, res: Response) => {
+  static getCredits = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedQuery: GetCreditsInput = req as any;
-    const orgId = (req as any).orgId;
+    const orgId = req.user?.orgId;
+    const isSuperAdmin = req.user?.roles?.includes('super_admin') ?? false;
+
+    if (!orgId && !isSuperAdmin) {
+      return res.status(403).json(ApiResponse.error('Organization access required'));
+    }
 
     const result = await CreditService.getCredits(validatedQuery.query, orgId);
 
@@ -146,9 +156,9 @@ export class CreditController {
    *       404:
    *         description: Credit not found
    */
-  static getCreditById = asyncHandler(async (req: Request, res: Response) => {
+  static getCreditById = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedParams: GetCreditByIdInput = req as any;
-    const orgId = (req as any).orgId;
+    const orgId = req.user?.orgId;
 
     const credit = await CreditService.getCreditById(validatedParams.params.id, orgId);
 
@@ -209,10 +219,14 @@ export class CreditController {
    *       404:
    *         description: Credit not found
    */
-  static updateCredit = asyncHandler(async (req: Request, res: Response) => {
+  static updateCredit = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedData: UpdateCreditInput = req as any;
-    const orgId = (req as any).orgId;
-    const userId = (req as any).userId;
+    const orgId = req.user?.orgId;
+    const userId = req.user?.id;
+
+    if (!orgId) {
+      return res.status(403).json(ApiResponse.error('Organization access required for credit update'));
+    }
 
     const credit = await CreditService.updateCredit(validatedData.params.id, validatedData.body, orgId, userId);
 
@@ -240,9 +254,9 @@ export class CreditController {
    *       404:
    *         description: Credit not found
    */
-  static deleteCredit = asyncHandler(async (req: Request, res: Response) => {
+  static deleteCredit = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedParams: DeleteCreditInput = req as any;
-    const orgId = (req as any).orgId;
+    const orgId = req.user?.orgId;
 
     const result = await CreditService.deleteCredit(validatedParams.params.id, orgId);
 
@@ -286,11 +300,15 @@ export class CreditController {
    *       404:
    *         description: Credit not found
    */
-  static applyCredit = asyncHandler(async (req: Request, res: Response) => {
+  static applyCredit = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { amount, description } = req.body;
-    const orgId = (req as any).orgId;
-    const userId = (req as any).userId;
+    const orgId = req.user?.orgId;
+    const userId = req.user?.id;
+
+    if (!orgId) {
+      return res.status(403).json(ApiResponse.error('Organization access required'));
+    }
 
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -339,9 +357,9 @@ export class CreditController {
    *       404:
    *         description: Credit not found
    */
-  static getCreditLedger = asyncHandler(async (req: Request, res: Response) => {
+  static getCreditLedger = asyncHandler(async (req: AuthRequest, res: Response) => {
     const validatedData: GetCreditLedgerInput = req as any;
-    const orgId = (req as any).orgId;
+    const orgId = req.user?.orgId;
     const result = await CreditService.getCreditLedger(validatedData.params.creditId, validatedData.query, orgId);
 
     res.status(200).json(ApiResponse.success(result, 'Credit ledger retrieved successfully'));
@@ -368,9 +386,9 @@ export class CreditController {
    *       404:
    *         description: Customer not found
    */
-  static getCustomerCreditSummary = asyncHandler(async (req: Request, res: Response) => {
+  static getCustomerCreditSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { customerId } = req.params;
-    const orgId = (req as any).orgId;
+    const orgId = req.user?.orgId;
     const summary = await CreditService.getCustomerCreditSummary(customerId, orgId);
 
     res.status(200).json(ApiResponse.success(summary, 'Customer credit summary retrieved successfully'));

@@ -54,7 +54,7 @@ export class GDPRService {
   /**
    * Get GDPR statistics
    */
-  async getStats() {
+  async getStats(): Promise<Record<string, any>> {
     return await gdprRepository.getStats();
   }
 

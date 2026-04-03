@@ -16,7 +16,7 @@ export const updateTaxConfigSchema = z.object({
 });
 
 export const getTaxConfigSchema = z.object({
-  // No params needed, org from auth
+  query: z.record(z.any()).optional()
 });
 
 export type CreateTaxConfigInput = z.infer<typeof createTaxConfigSchema>['body'];

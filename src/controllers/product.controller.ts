@@ -70,20 +70,19 @@ export class ProductController {
    *         description: List of products
    */
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json(ApiResponse.error('Authentication required'));
-    }
-
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
+    }
     const filters = {
       status: req.query.status as string,
       search: req.query.search as string,
     };
 
-    // All users see only products they created (follows meters pattern)
-    const result = await productService.findAll(req.user, page, limit, filters);
+    const result = await productService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 
@@ -100,11 +99,12 @@ export class ProductController {
    *         description: Product details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json(ApiResponse.error('Authentication required'));
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
     }
-
-    const product = await productService.findById(req.params.id, req.user);
+    const product = await productService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(product));
   });
 
@@ -121,11 +121,12 @@ export class ProductController {
    *         description: Product updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json(ApiResponse.error('Authentication required'));
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId in body, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
     }
-
-    const product = await productService.update(req.params.id, req.body, req.user, req);
+    const product = await productService.update(req.params.id, req.body, orgId, req.user?.id || 'system', req);
     res.json(ApiResponse.success(product, 'Product updated successfully'));
   });
 
@@ -142,11 +143,12 @@ export class ProductController {
    *         description: Product deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json(ApiResponse.error('Authentication required'));
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
     }
-
-    await productService.delete(req.params.id, req.user, req);
+    await productService.delete(req.params.id, orgId, req);
     res.json(ApiResponse.success(null, 'Product deleted successfully'));
   });
 

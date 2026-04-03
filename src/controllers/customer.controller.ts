@@ -130,7 +130,14 @@ export class CustomerController {
    *                       example: "2023-10-01T00:00:00.000Z"
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const customer = await customerService.create(req.body, req);
+    // Get org_id from authenticated user context, not from request body
+    const data = {
+      ...req.body,
+      org_id: req.user!.orgId,
+    };
+    console.log('Creating customer with data:', data);
+    console.log('User orgId:', req.user!.orgId);
+    const customer = await customerService.create(data, req);
     res.status(201).json(ApiResponse.success(customer, 'Customer created successfully'));
   });
 
@@ -174,8 +181,8 @@ export class CustomerController {
       search: req.query.search as string,
     };
 
-    const { customers, total } = await customerService.findAll(orgId, page, limit, filters);
-    res.json(ApiResponse.paginated(customers, page, limit, total));
+    const result = await customerService.findAll(orgId, page, limit, filters);
+    res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total));
   });
 
   /**

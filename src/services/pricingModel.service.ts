@@ -24,25 +24,25 @@ export class PricingModelService {
   async create(data: CreatePricingModelData, orgId: string, userId: string) {
     const existingModel = await prisma.pricing_models.findFirst({
       where: {
-        created_by: userId,
+        org_id: orgId,
         name: data.name,
       },
     });
 
     if (existingModel) {
-      throw ApiError.conflict('Pricing model with this name already exists for your account');
+      throw ApiError.conflict('Pricing model with this name already exists for this organization');
     }
 
-    // Verify meter belongs to user
+    // Verify meter belongs to org
     const meter = await prisma.meters.findFirst({
       where: {
         id: data.meter_id,
-        created_by: userId,
+        org_id: orgId,
       },
     });
 
     if (!meter) {
-      throw ApiError.badRequest('Invalid meter ID or meter does not belong to your account');
+      throw ApiError.badRequest('Invalid meter ID or meter does not belong to this organization');
     }
 
     try {
@@ -76,9 +76,9 @@ export class PricingModelService {
     }
   }
 
-  async findAll(userId: string, page = 1, limit = 10, filters?: any) {
+  async findAll(orgId: string, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
-    const where: any = { created_by: userId };
+    const where: any = { org_id: orgId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -123,11 +123,11 @@ export class PricingModelService {
     return { pricingModels, total, page, limit };
   }
 
-  async findById(id: string, userId: string) {
+  async findById(id: string, orgId: string) {
     const pricingModel = await prisma.pricing_models.findFirst({
       where: {
         id,
-        created_by: userId,
+        org_id: orgId,
       },
       include: {
         meters: {
@@ -154,36 +154,36 @@ export class PricingModelService {
     return pricingModel;
   }
 
-  async update(id: string, data: UpdatePricingModelData, userId: string) {
-    // Check if pricing model exists and belongs to user
-    await this.findById(id, userId);
+  async update(id: string, data: UpdatePricingModelData, orgId: string) {
+    // Check if pricing model exists and belongs to org
+    await this.findById(id, orgId);
 
     // Check for name conflict if name is being updated
     if (data.name) {
       const existingModel = await prisma.pricing_models.findFirst({
         where: {
-          created_by: userId,
+          org_id: orgId,
           name: data.name,
           id: { not: id },
         },
       });
 
       if (existingModel) {
-        throw ApiError.conflict('Pricing model with this name already exists for your account');
+        throw ApiError.conflict('Pricing model with this name already exists for this organization');
       }
     }
 
-    // Verify meter belongs to user if meter_id is being updated
+    // Verify meter belongs to org if meter_id is being updated
     if (data.meter_id) {
       const meter = await prisma.meters.findFirst({
         where: {
           id: data.meter_id,
-          created_by: userId,
+          org_id: orgId,
         },
       });
 
       if (!meter) {
-        throw ApiError.badRequest('Invalid meter ID or meter does not belong to your account');
+        throw ApiError.badRequest('Invalid meter ID or meter does not belong to this organization');
       }
     }
 
@@ -214,9 +214,9 @@ export class PricingModelService {
     }
   }
 
-  async delete(id: string, userId: string) {
-    // Check if pricing model exists and belongs to user
-    await this.findById(id, userId);
+  async delete(id: string, orgId: string) {
+    // Check if pricing model exists and belongs to org
+    await this.findById(id, orgId);
 
     try {
       await prisma.pricing_models.delete({

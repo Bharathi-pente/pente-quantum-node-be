@@ -26,10 +26,14 @@ export interface AuthRequest extends Request {
   };
 }
 
-async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+/**
+ * Keycloak JWT Authentication Middleware
+ * Verifies JWT tokens issued by Keycloak using JWKS
+ */
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // 1. Extract token from Authorization header
     const authHeader = req.headers.authorization;
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
@@ -84,6 +88,6 @@ async function authMiddleware(req: AuthRequest, res: Response, next: NextFunctio
     }
     res.status(401).json({ success: false, message: 'Authentication failed', error: err.message });
   }
-}
+};
 
 export default authMiddleware;

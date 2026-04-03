@@ -4,7 +4,6 @@ export const createCustomerSchema = z.object({
   body: z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email address'),
-    org_id: z.string().uuid('Invalid organization ID'),
     product_id: z.string().uuid('Invalid product ID').optional(),
     status: z.enum(['active', 'trial', 'churned', 'suspended']).optional(),
     mrr: z.number().min(0).optional(),

@@ -131,7 +131,7 @@ export class PaymentController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    const orgId = req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string;
     if (!orgId) {
       res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
       return;

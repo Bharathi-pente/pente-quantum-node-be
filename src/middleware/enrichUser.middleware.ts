@@ -39,8 +39,6 @@ async function enrichUserMiddleware(
       next();
       return;
     }
-
-    // Find user in database by keycloak_user_id
     const dbUser = await prisma.users.findUnique({
       where: { keycloak_user_id: req.user.keycloakId },
       select: {

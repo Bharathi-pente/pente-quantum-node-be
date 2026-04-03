@@ -41,9 +41,12 @@ export class UsageLimitTrackingController {
       return;
     }
 
+    const userId = req.user?.id;
     const usageData = await usageLimitService.getCurrentUsage(
       orgId, 
-      filters
+      filters,
+      undefined,
+      userId
     );
     
     res.json(
@@ -69,9 +72,11 @@ export class UsageLimitTrackingController {
       res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
       return;
     }
+    const userId = req.user?.id;
     const usageData = await usageLimitService.getLimitCurrentUsage(
       req.params.id, 
-      orgId
+      orgId,
+      userId
     );
     
     res.json(
@@ -104,9 +109,11 @@ export class UsageLimitTrackingController {
       return;
     }
 
+    const userId = req.user?.id;
     const stats = await usageLimitService.getUsageStats(
       orgId, 
-      filters
+      filters,
+      userId
     );
     
     res.json(

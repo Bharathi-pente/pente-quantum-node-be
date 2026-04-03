@@ -58,9 +58,9 @@ export class PricingModelController {
    *         description: Pricing model created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    const orgId = req.params.orgId || req.body.org_id || req.headers['x-org-id'] as string || req.query.orgId as string;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('orgId in body, x-org-id header, params.orgId, or orgId query parameter is required'));
       return;
     }
     const pricingModel = await pricingModelService.create(req.body, orgId, req.user!.id);
@@ -118,6 +118,11 @@ export class PricingModelController {
   getAll = asyncHandler(async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
+    }
     const filters = {
       search: req.query.search as string,
       status: req.query.status as string,
@@ -125,7 +130,7 @@ export class PricingModelController {
       meter_id: req.query.meter_id as string,
     };
 
-    const result = await pricingModelService.findAll(req.user!.id, page, limit, filters);
+    const result = await pricingModelService.findAll(orgId, page, limit, filters);
     res.json(ApiResponse.success(result, 'Pricing models retrieved successfully'));
   });
 
@@ -150,7 +155,12 @@ export class PricingModelController {
    *         description: Pricing model details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const pricingModel = await pricingModelService.findById(req.params.id, req.user!.id);
+    const orgId = req.params.orgId || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, or user orgId is required'));
+      return;
+    }
+    const pricingModel = await pricingModelService.findById(req.params.id, orgId);
     res.json(ApiResponse.success(pricingModel, 'Pricing model retrieved successfully'));
   });
 
@@ -203,7 +213,12 @@ export class PricingModelController {
    *         description: Pricing model updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const pricingModel = await pricingModelService.update(req.params.id, req.body, req.user!.id);
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId in body, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
+    }
+    const pricingModel = await pricingModelService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(pricingModel, 'Pricing model updated successfully'));
   });
 
@@ -228,7 +243,12 @@ export class PricingModelController {
    *         description: Pricing model deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await pricingModelService.delete(req.params.id, req.user!.id);
+    const orgId = req.params.orgId || req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
+    if (!orgId) {
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, params.orgId, params.id, or user orgId is required'));
+      return;
+    }
+    await pricingModelService.delete(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Pricing model deleted successfully'));
   });
 }

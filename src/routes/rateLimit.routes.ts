@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimitController from '../controllers/rateLimit.controller';
-// import { authenticateKeycloak } from '../middleware/keycloakAuth.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
   createRateLimitPolicySchema,
@@ -10,8 +11,10 @@ import {
 } from '../validators/rateLimit.validator';
 
 const router = Router();
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
-// Keycloak authentication removed — routes are unprotected by Keycloak
+// Authenticated routes
 
 /**
  * @swagger

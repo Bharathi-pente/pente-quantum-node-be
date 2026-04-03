@@ -18,7 +18,7 @@ export class MeterService {
       return await prisma.meters.create({
         data: {
           ...data,
-          org_id: data.org_id || null, // Optional org_id
+          org_id: data.org_id || request?.user?.orgId || null, // Use user's org_id if not provided
           status: data.status || 'active',
           created_by: request?.user?.id,
         },
@@ -31,18 +31,9 @@ export class MeterService {
     }
   }
 
-  async findAll(user?: any, page = 1, limit = 10, filters?: any) {
+  async findAll(orgId: string, page = 1, limit = 10, filters?: any) {
     const skip = (page - 1) * limit;
-    const where: any = {};
-
-    // Permission-based filtering - REQUIRED for security
-    if (!user) {
-      // No user means unauthenticated - return nothing
-      return { meters: [], total: 0, page, limit };
-    }
-
-    // All users see only meters they created
-    where.created_by = user.id;
+    const where: any = { org_id: orgId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -74,11 +65,11 @@ export class MeterService {
     return { meters, total, page, limit };
   }
 
-  async findById(id: string, user?: any) {
+  async findById(id: string, orgId: string) {
     const meter = await prisma.meters.findFirst({
       where: {
         id,
-        created_by: user?.id,
+        org_id: orgId,
       },
     });
 
@@ -89,22 +80,22 @@ export class MeterService {
     return meter;
   }
 
-  async update(id: string, data: any, user?: any) {
-    // Check if meter exists and belongs to user
-    await this.findById(id, user);
+  async update(id: string, data: any, orgId: string) {
+    // Check if meter exists and belongs to org
+    await this.findById(id, orgId);
 
     // Check for name conflict if name is being updated
     if (data.name) {
       const existingMeter = await prisma.meters.findFirst({
         where: {
-          created_by: user?.id,
+          org_id: orgId,
           name: data.name,
           id: { not: id },
         },
       });
 
       if (existingMeter) {
-        throw ApiError.conflict('Meter with this name already exists for your account');
+        throw ApiError.conflict('Meter with this name already exists for this organization');
       }
     }
 
@@ -121,9 +112,9 @@ export class MeterService {
     }
   }
 
-  async delete(id: string, user?: any) {
-    // Check if meter exists and belongs to user
-    await this.findById(id, user);
+  async delete(id: string, orgId: string) {
+    // Check if meter exists and belongs to org
+    await this.findById(id, orgId);
 
     try {
       await prisma.meters.delete({

@@ -68,9 +68,9 @@ export class UsageLimitController {
    *         description: Usage limit created successfully
    */
   create = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    const orgId = req.body.org_id || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header or user orgId is required'));
       return;
     }
     const usageLimit = await usageLimitService.create(req.body, orgId);
@@ -145,9 +145,9 @@ export class UsageLimitController {
       customer_id: req.query.customer_id as string || req.headers['x-customer-id'] as string,
     };
 
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    const orgId = req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('orgId is required to access usage limits'));
       return;
     }
     
@@ -176,9 +176,9 @@ export class UsageLimitController {
    *         description: Usage limit details
    */
   getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, or user orgId is required'));
       return;
     }
     const usageLimit = await usageLimitService.findById(req.params.id, orgId);
@@ -234,16 +234,12 @@ export class UsageLimitController {
    *         description: Usage limit updated successfully
    */
   update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, or user orgId is required'));
       return;
     }
-    const usageLimit = await usageLimitService.update(
-      req.params.id,
-      req.body,
-      orgId,
-    );
+    const usageLimit = await usageLimitService.update(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(serializeBigInt(usageLimit), 'Usage limit updated successfully'));
   });
 
@@ -268,9 +264,9 @@ export class UsageLimitController {
    *         description: Usage limit deleted successfully
    */
   delete = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
+    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+      res.status(400).json(ApiResponse.error('orgId query parameter, x-org-id header, or user orgId is required'));
       return;
     }
     await usageLimitService.delete(req.params.id, orgId);
@@ -322,11 +318,7 @@ export class UsageLimitController {
    *         description: Limit override created successfully
    */
   createOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
-      return;
-    }
+    const orgId = req.user?.orgId!;
     const limitOverride = await usageLimitService.createOverride(req.body, orgId);
     res.status(201).json(ApiResponse.success(limitOverride, 'Limit override created successfully'));
   });
@@ -383,11 +375,7 @@ export class UsageLimitController {
       active_only: req.query.active_only === 'false' ? false : true,
     };
 
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
+    const orgId = req.user?.orgId!;
 
     const result = await usageLimitService.findAllOverrides(orgId, page, limit, filters);
     res.json(ApiResponse.success(serializeBigInt(result), 'Limit overrides retrieved successfully'));
@@ -414,11 +402,7 @@ export class UsageLimitController {
    *         description: Limit override details
    */
   getOverrideById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
+    const orgId = req.user?.orgId!;
     const limitOverride = await usageLimitService.findOverrideById(req.params.id, orgId);
     res.json(ApiResponse.success(limitOverride, 'Limit override retrieved successfully'));
   });
@@ -462,11 +446,7 @@ export class UsageLimitController {
    *         description: Limit override updated successfully
    */
   updateOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.body.org_id || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
-      return;
-    }
+    const orgId = req.user?.orgId!;
     const limitOverride = await usageLimitService.updateOverride(req.params.id, req.body, orgId);
     res.json(ApiResponse.success(limitOverride, 'Limit override updated successfully'));
   });
@@ -492,11 +472,7 @@ export class UsageLimitController {
    *         description: Limit override deleted successfully
    */
   deleteOverride = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
-      return;
-    }
+    const orgId = req.user?.orgId!;
     await usageLimitService.deleteOverride(req.params.id, orgId);
     res.json(ApiResponse.success(null, 'Limit override deleted successfully'));
   });
@@ -579,13 +555,14 @@ export class UsageLimitController {
   getCurrentUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { page = 1, limit = 10, ...filters } = req.query as any;
 
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    const orgId = req.user?.orgId!;
+    const userId = req.user?.id;
+    if (!orgId && !userId) {
+      res.status(403).json(ApiResponse.error('Unable to resolve user scope for usage data'));
       return;
     }
 
-    const usageData = await usageLimitService.getCurrentUsage(orgId, filters, { page, limit });
+    const usageData = await usageLimitService.getCurrentUsage(orgId || undefined, filters, { page, limit }, userId);
     res.json(ApiResponse.success(usageData, 'Current usage data retrieved successfully'));
   });
 
@@ -648,12 +625,13 @@ export class UsageLimitController {
    *                   example: "Current usage for limit retrieved successfully"
    */
   getLimitCurrentUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    const orgId = req.user?.orgId!;
+    const userId = req.user?.id;
+    if (!orgId && !userId) {
+      res.status(403).json(ApiResponse.error('Unable to resolve user scope for limit usage'));
       return;
     }
-    const usageData = await usageLimitService.getLimitCurrentUsage(req.params.id, orgId);
+    const usageData = await usageLimitService.getLimitCurrentUsage(req.params.id, orgId || undefined, userId);
     res.json(ApiResponse.success(usageData, 'Current usage for limit retrieved successfully'));
   });
 
@@ -736,13 +714,14 @@ export class UsageLimitController {
       period: req.query.period as string || 'monthly',
     };
 
-    const orgId = req.query.orgId as string || req.headers['x-org-id'] as string;
-    if (!orgId) {
-      res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
+    const orgId = req.user?.orgId!;
+    const userId = req.user?.id;
+    if (!orgId && !userId) {
+      res.status(403).json(ApiResponse.error('Unable to resolve user scope for usage stats'));
       return;
     }
 
-    const stats = await usageLimitService.getUsageStats(orgId, filters);
+    const stats = await usageLimitService.getUsageStats(orgId || undefined, filters, userId);
     res.json(ApiResponse.success(stats, 'Usage statistics retrieved successfully'));
   });
 }

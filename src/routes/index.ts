@@ -33,6 +33,8 @@ import complianceRoutes from './compliance.routes';
 import externalEventsRoutes from './externalEvents.routes';
 import apiKeyRoutes from './apiKey.routes';
 import keycloakAuthRoutes from './keycloakAuth.routes';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 
 const router = Router();
 
@@ -52,6 +54,10 @@ router.get('/health', (_req, res) => {
 // Mount routes
 // Authentication routes powered by Keycloak
 router.use('/auth', keycloakAuthRoutes);
+
+// Enforce authenticated, org-scoped access for all remaining APIs
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);

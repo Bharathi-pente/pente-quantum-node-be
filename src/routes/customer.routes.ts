@@ -2,6 +2,8 @@ import { Router } from 'express';
 import customerController from '../controllers/customer.controller';
 import invoiceController from '../controllers/invoice.controller';
 import { validate } from '../middleware/validation.middleware';
+import authMiddleware from '../middleware/keycloakAuth.middleware';
+import enrichUserMiddleware from '../middleware/enrichUser.middleware';
 import {
   createCustomerSchema,
   updateCustomerSchema,
@@ -10,6 +12,10 @@ import {
 import { getCustomerInvoicesQuerySchema } from '../validators/invoice.validator';
 
 const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+router.use(enrichUserMiddleware);
 
 /**
  * @route   POST /api/v1/customers

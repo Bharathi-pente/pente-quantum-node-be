@@ -34,7 +34,8 @@ export class UsageLimitCrudController {
       res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
       return;
     }
-    const usageLimit = await usageLimitService.create(req.body, orgId);
+    const userId = req.user?.id;
+    const usageLimit = await usageLimitService.create(req.body, orgId, userId);
     res.status(201).json(
       ApiResponse.success(
         serializeBigInt(usageLimit), 
@@ -70,11 +71,13 @@ export class UsageLimitCrudController {
       return;
     }
 
+    const userId = req.user?.id;
     const result = await usageLimitService.findAll(
       orgId, 
       page, 
       limit, 
-      filters
+      filters,
+      userId
     );
     
     res.json(
@@ -100,9 +103,11 @@ export class UsageLimitCrudController {
       res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
       return;
     }
+    const userId = req.user?.id;
     const usageLimit = await usageLimitService.findById(
       req.params.id, 
-      orgId
+      orgId,
+      userId
     );
     
     res.json(
@@ -128,10 +133,12 @@ export class UsageLimitCrudController {
       res.status(400).json(ApiResponse.error('org_id in body or x-org-id header is required'));
       return;
     }
+    const userId = req.user?.id;
     const usageLimit = await usageLimitService.update(
       req.params.id, 
       req.body, 
-      orgId
+      orgId,
+      userId
     );
     
     res.json(
@@ -157,7 +164,8 @@ export class UsageLimitCrudController {
       res.status(400).json(ApiResponse.error('orgId query parameter or x-org-id header is required'));
       return;
     }
-    await usageLimitService.delete(req.params.id, orgId);
+    const userId = req.user?.id;
+    await usageLimitService.delete(req.params.id, orgId, userId);
     res.json(ApiResponse.success(null, 'Usage limit deleted successfully'));
   });
 }

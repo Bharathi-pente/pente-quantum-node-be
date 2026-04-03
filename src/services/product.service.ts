@@ -87,7 +87,7 @@ export class ProductService extends BaseService<products> {
       const record = await this.model.create({
         data: {
           ...data,
-          org_id: data.org_id || null, // Optional org_id
+          org_id: data.org_id || request?.user?.orgId || null, // Use user's org_id if not provided
           status: data.status || 'active',
           created_by: request?.user?.id,
           base_price: data.base_price || new Prisma.Decimal(0),
@@ -116,25 +116,16 @@ export class ProductService extends BaseService<products> {
   }
 
   /**
-   * Override findAll to filter by created_by (follows meters pattern)
+   * Override findAll to filter by org_id (follows pricing models pattern)
    */
   async findAll(
-    user?: any,
+    orgId: string,
     page = 1,
     limit = 10,
     filters: any = {}
   ): Promise<any> {
     const skip = (page - 1) * limit;
-    const where: any = {};
-
-    // Permission-based filtering - REQUIRED for security
-    if (!user) {
-      // No user means unauthenticated - return nothing
-      return buildOffsetPaginationResponse([], 0, page, limit);
-    }
-
-    // All users see only products they created
-    where.created_by = user.id;
+    const where: any = { org_id: orgId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -161,13 +152,13 @@ export class ProductService extends BaseService<products> {
   }
 
   /**
-   * Override findById to filter by created_by (follows meters pattern)
+   * Override findById to filter by org_id (follows pricing models pattern)
    */
-  async findById(id: string, user?: any): Promise<products> {
+  async findById(id: string, orgId: string): Promise<products> {
     const record = await this.model.findFirst({
       where: {
         id,
-        created_by: user?.id,
+        org_id: orgId,
       },
       ...(this.config.include && { include: this.config.include }),
     });
@@ -180,24 +171,24 @@ export class ProductService extends BaseService<products> {
   }
 
   /**
-   * Override update to filter by created_by (follows meters pattern)
+   * Override update to filter by org_id (follows pricing models pattern)
    */
-  async update(id: string, data: Partial<products>, user?: any, request?: any): Promise<products> {
-    // Check if record exists and belongs to user
-    await this.findById(id, user);
+  async update(id: string, data: Partial<products>, orgId: string, userId: string, request?: any): Promise<products> {
+    // Check if record exists and belongs to org
+    await this.findById(id, orgId);
 
     // Check for name conflict if name is being updated
     if (data.name) {
       const existingProduct = await prisma.products.findFirst({
         where: {
-          created_by: user?.id,
+          org_id: orgId,
           name: data.name,
           id: { not: id },
         },
       });
 
       if (existingProduct) {
-        throw ApiError.conflict('Product with this name already exists for your account');
+        throw ApiError.conflict('Product with this name already exists for this organization');
       }
     }
 
@@ -211,7 +202,7 @@ export class ProductService extends BaseService<products> {
       if (this.config.auditLogging && record.org_id) {
         await AuditLogger.logSuccess(
           record.org_id,
-          request?.user?.email || 'system',
+          request?.user?.email || userId,
           'products.update',
           record.name,
           record.id,
@@ -230,11 +221,11 @@ export class ProductService extends BaseService<products> {
   }
 
   /**
-   * Override delete to check for customers (follows meters pattern)
+   * Override delete to check for customers (follows pricing models pattern)
    */
-  async delete(id: string, user?: any, _request?: any): Promise<void> {
-    // Check if record exists and belongs to user
-    await this.findById(id, user);
+  async delete(id: string, orgId: string, _request?: any): Promise<void> {
+    // Check if record exists and belongs to org
+    await this.findById(id, orgId);
 
     // Check if any customers are using this product
     const customerCount = await prisma.customers.count({
@@ -252,15 +243,15 @@ export class ProductService extends BaseService<products> {
         where: { id },
       });
 
-      // if (this.config.auditLogging && request?.user?.orgId) {
+      // if (this.config.auditLogging && orgId) {
       //   await AuditLogger.logSuccess(
-      //     request.user.orgId,
-      //     request?.user?.email || 'system',
+      //     orgId,
+      //     _request?.user?.email || 'system',
       //     'products.delete',
       //     id,
       //     id,
       //     {},
-      //     request
+      //     _request
       //   );
       // }
     } catch (error: any) {

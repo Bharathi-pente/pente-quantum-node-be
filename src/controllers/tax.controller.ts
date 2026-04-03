@@ -33,7 +33,7 @@ export class TaxController {
    *                       $ref: '#/components/schemas/TaxConfig'
    */
   static getTaxConfig = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const orgId = req.user?.orgId;
+    const orgId = req.params.id || req.query.orgId as string || req.headers['x-org-id'] as string || req.user?.orgId;
     if (!orgId) {
       return res.status(400).json(ApiResponse.error('Organization ID not found'));
     }
