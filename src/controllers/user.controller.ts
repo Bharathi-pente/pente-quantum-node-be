@@ -150,6 +150,66 @@ export class UserController {
     await userService.delete(req.params.id);
     res.json(ApiResponse.success(null, 'User deleted successfully'));
   });
+
+  /**
+   * Get user events list from external API
+   */
+  getUserEventsList = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const { limit = '100', offset = '0' } = req.query;
+    
+    const baseURL = process.env.EXTERNAL_EVENTS_BASE_URL || 'http://3.88.179.52:8011';
+    const url = `${baseURL}/v1/organization/org_acme/customers/org_acme/users/${userId}/events`;
+    
+    try {
+      const axios = (await import('axios')).default;
+      const response = await axios.get(url, {
+        params: { limit, offset },
+        timeout: Number(process.env.EXTERNAL_EVENTS_TIMEOUT_MS || '10000'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+      
+      res.json(ApiResponse.success(response.data));
+    } catch (error: any) {
+      console.error('External API error for events list:', error.message);
+      res.status(error.response?.status || 500).json(
+        ApiResponse.error('Failed to fetch user events')
+      );
+    }
+  });
+
+  /**
+   * Get user token usage metrics from external API
+   */
+  getUserTokenUsage = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const { limit = '100', offset = '0' } = req.query;
+    
+    const baseURL = process.env.EXTERNAL_EVENTS_BASE_URL || 'http://3.88.179.52:8011';
+    const url = `${baseURL}/v1/organization/org_acme/customers/org_acme/users/${userId}/metrics`;
+    
+    try {
+      const axios = (await import('axios')).default;
+      const response = await axios.get(url, {
+        params: { limit, offset },
+        timeout: Number(process.env.EXTERNAL_EVENTS_TIMEOUT_MS || '10000'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+      
+      res.json(ApiResponse.success(response.data));
+    } catch (error: any) {
+      console.error('External API error for token usage:', error.message);
+      res.status(error.response?.status || 500).json(
+        ApiResponse.error('Failed to fetch user token usage')
+      );
+    }
+  });
 }
 
 export default new UserController();

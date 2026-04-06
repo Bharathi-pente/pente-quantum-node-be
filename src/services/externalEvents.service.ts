@@ -25,7 +25,7 @@ class ExternalEventsService {
   private customerId: string;
 
   constructor() {
-    this.baseURL = process.env.EXTERNAL_EVENTS_BASE_URL || 'https://3qw7hp8r-8080.inc1.devtunnels.ms/v1';
+    this.baseURL = process.env.EXTERNAL_EVENTS_BASE_URL || 'http://3.88.179.52:8011';
     this.organizationId = process.env.EXTERNAL_EVENTS_ORG_ID || 'org_acme';
     this.customerId = process.env.EXTERNAL_EVENTS_CUSTOMER_ID || 'org_acme';
 
@@ -92,7 +92,7 @@ class ExternalEventsService {
     offset: number = 0
   ): Promise<UserEventsResponse> {
     try {
-      const url = `/events/organization/${this.organizationId}/customer/${this.customerId}/user/${userId}`;
+      const url = `/v1/events/organization/${this.organizationId}/customer/${this.customerId}/user/${userId}`;
       
       const response = await this.axiosInstance.get(url, {
         params: {
@@ -143,7 +143,7 @@ class ExternalEventsService {
    */
   async getUserEventsList(userId: string, limit: number = 100, offset: number = 0) {
     try {
-      const url = `/events/organization/${this.organizationId}/customer/${this.customerId}/user/${userId}`;
+      const url = `/v1/events/organization/${this.organizationId}/customer/${this.customerId}/user/${userId}`;
       const response = await this.axiosInstance.get(url, {
         params: { limit, offset },
       });
@@ -179,30 +179,29 @@ class ExternalEventsService {
   }
 
   /**
-   * Summarize token usage and cost from events for a user
+   * Get user token usage metrics from external API
    */
   async getUserTokenUsage(userId: string, limit: number = 100, offset: number = 0) {
-    const raw = await this.getUserEventsList(userId, limit, offset);
-    const events = Array.isArray(raw?.events) ? raw.events : [];
-
-    let totalInput = 0;
-    let totalOutput = 0;
-    let totalCost = 0;
-
-    for (const ev of events) {
-      totalInput += Number(ev.input_tokens || 0);
-      totalOutput += Number(ev.output_tokens || 0);
-      totalCost += Number(ev.cost || 0);
+    try {
+      const url = `/v1/organization/${this.organizationId}/customers/${this.customerId}/users/${userId}/metrics`;
+      const response = await this.axiosInstance.get(url, {
+        params: { limit, offset },
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      logger.error('Failed to fetch token usage metrics', { userId, error: error?.message });
+      
+      // Return safe defaults on error
+      return {
+        org_id: this.organizationId,
+        customer_id: this.customerId,
+        user_id: userId,
+        total_tokens: 0,
+        total_cost: 0,
+        total_events: 0,
+      };
     }
-
-    return {
-      org_id: raw?.org_id ?? raw?.organization ?? this.organizationId,
-      customer_id: raw?.customer_id ?? this.customerId,
-      user_id: userId,
-      total_tokens: totalInput + totalOutput,
-      total_cost: totalCost,
-      total_events: raw?.count ?? events.length,
-    };
   }
 
   /**

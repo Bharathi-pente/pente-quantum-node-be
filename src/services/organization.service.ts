@@ -1,6 +1,8 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
 import { AuditLogger } from '../utils/audit-logger';
+import axios from 'axios';
+import logger from '../config/logger';
 
 export class OrganizationService {
   async create(data: any, request?: any) {
@@ -284,6 +286,51 @@ export class OrganizationService {
   async delete(id: string, user?: any) {
     await this.findById(id, user);
     return await prisma.organizations.delete({ where: { id } });
+  }
+
+  /**
+   * Get user dashboard data from external API
+   */
+  async getExternalDashboard(orgId: string, customerId: string, userId: string) {
+    const baseURL = process.env.EXTERNAL_EVENTS_BASE_URL || 'http://3.88.179.52:8011';
+    const url = `${baseURL}/v1/organization/${orgId}/customers/${customerId}/users/${userId}/dashboard`;
+
+    try {
+      logger.info('Fetching external dashboard data', { url, orgId, customerId, userId });
+      
+      const response = await axios.get(url, {
+        timeout: Number(process.env.EXTERNAL_EVENTS_TIMEOUT_MS || '10000'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      logger.info('External dashboard data fetched successfully', { 
+        status: response.status,
+        dataKeys: Object.keys(response.data || {})
+      });
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response) {
+        logger.error('External API returned error', {
+          status: error.response.status,
+          data: error.response.data,
+          url,
+        });
+        throw new ApiError(
+          error.response.status,
+          `External API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+        );
+      } else if (error.request) {
+        logger.error('No response from external API', { url, error: error.message });
+        throw new ApiError(503, 'External API is not responding. Please try again later.');
+      } else {
+        logger.error('Error calling external API', { url, error: error.message });
+        throw new ApiError(500, 'Failed to fetch dashboard data from external API');
+      }
+    }
   }
 
   async getDashboard(orgId: string) {

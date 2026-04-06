@@ -59,6 +59,8 @@ router.use('/auth', keycloakAuthRoutes);
 router.use(authMiddleware);
 router.use(enrichUserMiddleware);
 
+// Add singular route for external API compatibility
+router.use('/organization', organizationRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);
 router.use('/roles', roleRoutes);

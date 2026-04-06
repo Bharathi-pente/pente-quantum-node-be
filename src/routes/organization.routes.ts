@@ -82,6 +82,16 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/organization/:orgId/customers/:customerId/users/:userId/dashboard
+ * @desc    Get user dashboard data from external API
+ * @access  Private
+ */
+router.get(
+  '/:orgId/customers/:customerId/users/:userId/dashboard',
+  organizationController.getExternalDashboard
+);
+
+/**
  * @route   DELETE /api/v1/organizations/:id
  * @desc    Delete organization
  * @access  Private (admin)

@@ -151,6 +151,15 @@ export class OrganizationController {
   });
 
   /**
+   * Get user dashboard data from external API
+   */
+  getExternalDashboard = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { orgId, customerId, userId } = req.params;
+    const dashboard = await organizationService.getExternalDashboard(orgId, customerId, userId);
+    res.json(ApiResponse.success(dashboard));
+  });
+
+  /**
    * @swagger
    * /organizations/{id}:
    *   delete:

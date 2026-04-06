@@ -50,4 +50,18 @@ router.put('/:id', validate(updateUserSchema), userController.update);
  */
 router.delete('/:id', validate(getUserSchema), userController.delete);
 
+/**
+ * @route   GET /api/v1/user/events/:userId/list
+ * @desc    Get user events list from external API
+ * @access  Private
+ */
+router.get('/events/:userId/list', userController.getUserEventsList);
+
+/**
+ * @route   GET /api/v1/user/events/token-usage/:userId
+ * @desc    Get user token usage metrics from external API
+ * @access  Private
+ */
+router.get('/events/token-usage/:userId', userController.getUserTokenUsage);
+
 export default router;
