@@ -1,6 +1,8 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
 import prisma from '../config/database';
+import { getBillingClient, type PushEventPayload } from '../integrations/billing.client';
+import logger from '../config/logger';
 
 export interface UsageAggregationFilters {
   customer_id?: string;
@@ -21,6 +23,21 @@ export interface UsageStatsFilters {
   end_date?: Date;
   period?: 'hour' | 'day' | 'week' | 'month' | 'year';
 }
+
+/**
+ * ═══════════════════════════════════════════════════════
+ * BILLING INTEGRATION — Meter → Lago Event Code Mapping
+ * ═══════════════════════════════════════════════════════
+ * Maps backend meter fields to Lago event codes and properties
+ * Update this when adding new meters
+ */
+const METER_TO_LAGO: Record<string, { event_code: string;  prop_key?: string }> = {
+  'input_tokens':  { event_code: 'input_tokens',  prop_key: 'input_tokens'  },
+  'output_tokens': { event_code: 'output_tokens', prop_key: 'output_tokens' },
+  'count':         { event_code: 'api_calls'                                },  // COUNT — no property
+  'gpu_seconds':   { event_code: 'gpu_seconds',   prop_key: 'gpu_seconds'   },
+  'storage_gb':    { event_code: 'storage_gb',    prop_key: 'storage_gb'    },
+};
 
 export class UsageService {
   /**
@@ -86,6 +103,19 @@ export class UsageService {
         metadata: data.metadata || {},
         source: data.source,
       },
+    }).then((event) => {
+      // ═══════════════════════════════════════════════════════
+      // BILLING INTEGRATION — Trigger 3: Usage Event Tracked
+      // ═══════════════════════════════════════════════════════
+      // Fire-and-recover: forward to billing service after commit
+      this.forwardEventToBilling(event, meter, orgId).catch((err) => {
+        logger.error('Usage event billing forward failed', {
+          event_id: event.id,
+          meter_field: meter.field,
+          error: err.message,
+        });
+      });
+      return event;
     });
   }
 
@@ -154,10 +184,23 @@ export class UsageService {
       source: event.source,
     }));
 
-    return await prisma.usage_events.createMany({
+    const result = await prisma.usage_events.createMany({
       data: usageEvents,
       skipDuplicates: false,
     });
+
+    // ═══════════════════════════════════════════════════════
+    // BILLING INTEGRATION — Trigger 3: Bulk Usage Events
+    // ═══════════════════════════════════════════════════════
+    // Forward all events to billing service (batch API)
+    this.forwardBatchEventsToBilling(events, meters, orgId).catch((err) => {
+      logger.error('Batch usage events billing forward failed', {
+        count: events.length,
+        error: err.message,
+      });
+    });
+
+    return result;
   }
 
   /**
@@ -587,6 +630,127 @@ export class UsageService {
     }
 
     return start;
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * BILLING INTEGRATION — Private method for Trigger 3 (single event)
+   * ═══════════════════════════════════════════════════════
+   * Forward a single usage event to billing service for Lago metering
+   * Pattern: Fire-and-recover (failures logged, not thrown)
+   */
+  private async forwardEventToBilling(event: any, meter: any, orgId: string): Promise<void> {
+    const mapping = METER_TO_LAGO[meter.field];
+    
+    if (!mapping) {
+      logger.warn('No Lago mapping for meter field — skipping billing forward', {
+        meter_field: meter.field,
+        meter_id: meter.id,
+      });
+      return;
+    }
+
+    const billingLevel = process.env.BILLING_LEVEL || 'org';
+    
+    // Determine internal_customer_id based on billing level
+    const internal_customer_id = billingLevel === 'customer'
+      ? (event.customer_id ?? orgId)  // Use customer_id if available, fallback to org_id
+      : orgId;                         // Always use org_id for org-level billing
+
+    // Build properties object (empty for COUNT metrics)
+    const properties: Record<string, number> = {};
+    if (mapping.prop_key) {
+      properties[mapping.prop_key] = Number(event.event_value);
+    }
+
+    const billing = getBillingClient();
+
+    const result = await billing.pushEvent({
+      internal_customer_id,
+      event_code: mapping.event_code,
+      properties,
+    });
+
+    if (result.success) {
+      logger.debug('Usage event forwarded to billing service', {
+        event_id: event.id,
+        lago_event_code: mapping.event_code,
+        internal_customer_id,
+      });
+    } else {
+      logger.error('Failed to forward usage event to billing service', {
+        event_id: event.id,
+        error: result.error,
+      });
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * BILLING INTEGRATION — Private method for Trigger 3 (batch)
+   * ═══════════════════════════════════════════════════════
+   * Forward multiple usage events to billing service as batch
+   * Pattern: Fire-and-recover (failures logged, not thrown)
+   */
+  private async forwardBatchEventsToBilling(
+    events: Array<any>, 
+    meters: Array<any>, 
+    orgId: string
+  ): Promise<void> {
+    // Create meter lookup map
+    const meterMap = new Map(meters.map(m => [m.id, m]));
+    
+    const billingLevel = process.env.BILLING_LEVEL || 'org';
+    const billing = getBillingClient();
+
+    // Build Lago event payloads
+    const lagoEvents: PushEventPayload[] = [];
+
+    for (const event of events) {
+      const meter = meterMap.get(event.meter_id);
+      if (!meter) continue;
+
+      const mapping = METER_TO_LAGO[meter.field];
+      if (!mapping) {
+        logger.warn('No Lago mapping for meter field in batch — skipping', {
+          meter_field: meter.field,
+        });
+        continue;
+      }
+
+      const internal_customer_id = billingLevel === 'customer'
+        ? (event.customer_id ?? orgId)
+        : orgId;
+
+      const properties: Record<string, number> = {};
+      if (mapping.prop_key) {
+        properties[mapping.prop_key] = Number(event.event_value);
+      }
+
+      lagoEvents.push({
+        internal_customer_id,
+        event_code: mapping.event_code,
+        properties,
+      });
+    }
+
+    if (lagoEvents.length === 0) {
+      logger.warn('No valid events to forward to billing service (no mappings found)');
+      return;
+    }
+
+    const result = await billing.pushBatchEvents({ events: lagoEvents });
+
+    if (result.success) {
+      logger.info('Batch usage events forwarded to billing service', {
+        count: lagoEvents.length,
+      });
+    } else {
+      logger.error('Failed to forward batch usage events to billing service', {
+        count: lagoEvents.length,
+        error: result.error,
+      });
+    }
   }
 }
 

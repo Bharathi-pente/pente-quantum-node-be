@@ -48,6 +48,24 @@ export class ProductController {
    *                 type: string
    *                 enum: [active, draft, archived]
    *                 description: Product status (optional)
+   *               plan_code:
+   *                 type: string
+   *                 description: Plan code for Lago integration (optional)
+   *               interval:
+   *                 type: string
+   *                 description: Billing interval (e.g., monthly, yearly) (optional)
+   *               pay_in_advance:
+   *                 type: boolean
+   *                 description: Whether to pay in advance (optional)
+   *               amount_cents:
+   *                 type: number
+   *                 description: Amount in cents for Lago plan (optional)
+   *               amount_currency:
+   *                 type: string
+   *                 description: Currency for Lago plan (optional)
+   *               plan_description:
+   *                 type: string
+   *                 description: Description for Lago plan (optional)
    *     responses:
    *       201:
    *         description: Product created successfully

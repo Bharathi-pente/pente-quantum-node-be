@@ -7,6 +7,9 @@ export const createMeterSchema = z.object({
     aggregation: z.enum(['SUM', 'COUNT', 'MAX', 'AVG']),
     field: z.string().min(1, 'Field is required'),
     status: z.enum(['active', 'draft', 'archived']).optional(),
+    billable_metric_code: z.string().optional(),
+    billable_metric_description: z.string().optional(),
+    recurring: z.boolean().optional(),
   }),
 });
 
@@ -20,6 +23,9 @@ export const updateMeterSchema = z.object({
     aggregation: z.enum(['SUM', 'COUNT', 'MAX', 'AVG']).optional(),
     field: z.string().min(1).optional(),
     status: z.enum(['active', 'draft', 'archived']).optional(),
+    billable_metric_code: z.string().optional(),
+    billable_metric_description: z.string().optional(),
+    recurring: z.boolean().optional(),
   }),
 });
 

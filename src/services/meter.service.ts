@@ -1,5 +1,7 @@
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
+import { getBillingClient } from '../integrations/billing.client';
+import logger from '../config/logger';
 
 export class MeterService {
   async create(data: any, request?: any) {
@@ -15,7 +17,7 @@ export class MeterService {
     }
 
     try {
-      return await prisma.meters.create({
+      const meter = await prisma.meters.create({
         data: {
           ...data,
           org_id: data.org_id || request?.user?.orgId || null, // Use user's org_id if not provided
@@ -23,6 +25,19 @@ export class MeterService {
           created_by: request?.user?.id,
         },
       });
+
+      // Sync billable metric to billing service if billable metric fields are provided
+      if (data.billable_metric_code) {
+        // Fire-and-recover pattern: sync to billing service after commit
+        this.syncBillableMetricToBilling(meter).catch((err) => {
+          logger.error('Failed to sync billable metric to billing service', {
+            meter_id: meter.id,
+            error: err.message,
+          });
+        });
+      }
+
+      return meter;
     } catch (error: any) {
       if (error.code === 'P2003') {
         throw ApiError.badRequest('Invalid organization ID');
@@ -450,6 +465,72 @@ export class MeterService {
       default:
         return 24 * 60 * 60 * 1000;
     }
+  }
+
+  private async syncBillableMetricToBilling(meter: any): Promise<void> {
+    const billing = getBillingClient();
+
+    try {
+      logger.info('Syncing billable metric to billing service', {
+        meter_id: meter.id,
+        meter_name: meter.name,
+        billable_metric_code: meter.billable_metric_code,
+      });
+
+      const result = await billing.createBillableMetric({
+        internal_id: meter.id,
+        name: meter.name,
+        code: meter.billable_metric_code,
+        aggregation_type: this.mapAggregationToLago(meter.aggregation),
+        field_name: meter.field,
+        description: meter.billable_metric_description || `Tracks ${meter.name}`,
+        ...(this.shouldBeRecurring(meter.aggregation, meter.recurring) !== undefined && {
+          recurring: this.shouldBeRecurring(meter.aggregation, meter.recurring)
+        }),
+      });
+
+      if (result.success) {
+        logger.info('Billable metric synced to billing service successfully', {
+          meter_id: meter.id,
+          billable_metric_code: meter.billable_metric_code,
+        });
+      } else {
+        logger.error('Billing service returned failure for billable metric creation', {
+          meter_id: meter.id,
+          error: result.error,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to sync billable metric to billing service', {
+        meter_id: meter.id,
+        error: error.message,
+      });
+      throw error; // Re-throw to be caught by the fire-and-recover pattern
+    }
+  }
+
+  private mapAggregationToLago(aggregation: string): string {
+    switch (aggregation) {
+      case 'SUM':
+        return 'sum_agg';
+      case 'COUNT':
+        return 'count_agg';
+      case 'MAX':
+        return 'max_agg';
+      case 'AVG':
+        return 'avg_agg';
+      default:
+        return 'sum_agg';
+    }
+  }
+
+  private shouldBeRecurring(aggregation: string, userRecurring?: boolean): boolean | undefined {
+    // COUNT aggregation in Lago doesn't support recurring billing
+    if (aggregation === 'COUNT') {
+      return undefined;
+    }
+    // For other aggregations, use user preference or default to true
+    return userRecurring !== undefined ? userRecurring : true;
   }
 }
 

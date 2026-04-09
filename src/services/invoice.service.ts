@@ -1,6 +1,8 @@
+
 import prisma from '../config/database';
 import ApiError from '../utils/ApiError';
 import { AuditLogger } from '../utils/audit-logger';
+import { getBillingClient } from '../integrations/billing.client';
 
 export class InvoiceService {
   async create(data: any, orgId: string, request?: any) {
@@ -130,6 +132,28 @@ export class InvoiceService {
         },
       });
 
+      // Transform invoice to match frontend Zod schema
+      const transformedInvoice = {
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        customer_id: invoice.customer_id,
+        issue_date: invoice.issue_date.toISOString().split('T')[0], // YYYY-MM-DD format
+        due_date: invoice.due_date.toISOString().split('T')[0],
+        paid_date: invoice.paid_date ? invoice.paid_date.toISOString().split('T')[0] : null,
+        subtotal: Number(invoice.subtotal),
+        tax_amount: invoice.tax_amount !== null ? Number(invoice.tax_amount) : null,
+        tax_rate: invoice.tax_rate !== null ? Number(invoice.tax_rate) : null,
+        total: Number(invoice.total),
+        credits_applied: invoice.credits_applied !== null ? Number(invoice.credits_applied) : null,
+        currency: invoice.currency,
+        payment_method_id: invoice.payment_method_id,
+        status: invoice.status,
+        notes: invoice.notes,
+        customers: invoice.customers,
+        payment_methods: invoice.payment_methods,
+        invoice_line_items: invoice.invoice_line_items,
+      };
+
       // Log successful invoice creation
       await AuditLogger.logSuccess(
         orgId,
@@ -147,7 +171,67 @@ export class InvoiceService {
         request
       );
 
-      return invoice;
+      // Fire-and-recover: push to billing service (Lago) after DB commit
+      (async () => {
+        try {
+          // Prepare Lago invoice payload (minimal, can be extended as needed)
+          const fees = invoice.invoice_line_items && invoice.invoice_line_items.length > 0
+            ? invoice.invoice_line_items.map((item: any) => ({
+                add_on_code: item.add_on_code,
+                amount_cents: item.amount_cents,
+                quantity: item.quantity,
+              }))
+            : [{
+                add_on_code: 'invoice_subtotal',
+                amount_cents: Math.round(Number(invoice.subtotal) * 100), // Convert to cents
+                quantity: 1,
+              }];
+          const lagoPayload = {
+            invoice: {
+              external_customer_id: customer.id,
+              customer_name: customer.name,
+              customer_email: customer.email,
+              currency: invoice.currency,
+              fees,
+              // Add more fields if needed
+            }
+          };
+          const billingClient = getBillingClient();
+          const resp = await billingClient.createInvoice(lagoPayload);
+          if (!resp.success) {
+            AuditLogger.logFailure(
+              orgId,
+              request?.user?.email || 'system',
+              'invoice.lago_create',
+              data.invoice_number,
+              invoice.id,
+              { error: resp.error, payload: lagoPayload },
+              request
+            );
+          } else {
+            AuditLogger.logSuccess(
+              orgId,
+              request?.user?.email || 'system',
+              'invoice.lago_create',
+              data.invoice_number,
+              invoice.id,
+              { lago: resp.data },
+              request
+            );
+          }
+        } catch (err: any) {
+          AuditLogger.logFailure(
+            orgId,
+            request?.user?.email || 'system',
+            'invoice.lago_create',
+            data.invoice_number,
+            invoice.id,
+            { error: err.message },
+            request
+          );
+        }
+      })();
+      return transformedInvoice;
     } catch (error: any) {
       // Log failed invoice creation
       await AuditLogger.logFailure(

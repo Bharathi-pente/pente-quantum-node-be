@@ -3,6 +3,7 @@ import ApiError from '../utils/ApiError';
 import { AuditLogger } from '../utils/audit-logger';
 import axios from 'axios';
 import logger from '../config/logger';
+import { getBillingClient, type LagoPlanCode } from '../integrations/billing.client';
 
 export class OrganizationService {
   async create(data: any, request?: any) {
@@ -72,6 +73,19 @@ export class OrganizationService {
         },
         request
       );
+
+      // ═══════════════════════════════════════════════════════
+      // BILLING INTEGRATION — Trigger 1: New Organization Created
+      // ═══════════════════════════════════════════════════════
+      // Fire-and-recover pattern: sync to billing service after commit
+      // Never await this — failures are logged, not thrown
+      this.syncOrgToBilling(organization).catch((err) => {
+        logger.error('Billing sync failed for new organization', {
+          org_id: organization.id,
+          org_name: organization.name,
+          error: err.message,
+        });
+      });
 
       return organization;
     } catch (error: any) {
@@ -428,6 +442,145 @@ export class OrganizationService {
       activeRateCards,
       customerHealth: healthCounts,
     };
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * BILLING INTEGRATION — Private method for Trigger 1
+   * ═══════════════════════════════════════════════════════
+   * Sync new organization to billing service and Lago
+   * Called after organization is successfully created
+   * Pattern: Fire-and-recover (failures logged, not thrown)
+   */
+  private async syncOrgToBilling(org: any): Promise<void> {
+    const billingLevel = process.env.BILLING_LEVEL || 'org';
+    
+    // Only sync if billing at org level (default for B2B SaaS)
+    if (billingLevel !== 'org') {
+      logger.debug('Skipping org billing sync (BILLING_LEVEL != org)', { org_id: org.id });
+      return;
+    }
+
+    const billing = getBillingClient();
+
+    try {
+      logger.info('Syncing organization to billing service', {
+        org_id: org.id,
+        org_name: org.name,
+        billing_email: org.billing_email,
+      });
+
+      // Step 1: Create organization in billing service
+      const orgResult = await billing.createOrganization({
+        internal_id: org.id,
+        name: org.name,
+        slug: org.slug,
+        billing_email: org.billing_email,
+        status: org.status || 'active',
+        settings: org.settings || {},
+      });
+
+      if (!orgResult.success) {
+        logger.error('Failed to create organization in billing service', {
+          org_id: org.id,
+          error: orgResult.error,
+        });
+        // Continue with customer creation even if org creation fails
+      } else {
+        logger.info('Organization created in billing service', {
+          org_id: org.id,
+          billing_org_id: orgResult.data?.organization?.id,
+        });
+      }
+
+      // Step 2: Create customer in Lago (as before)
+      const defaultPlan: LagoPlanCode = 'starter'; // Default plan for new orgs
+      
+      // Extract settings for metadata
+      const settings = (org.settings as Record<string, any>) ?? {};
+      
+      const result = await billing.createCustomer({
+        internal_id: org.id,
+        org_id: org.id,
+        name: org.name,
+        email: org.billing_email,
+        plan_code: defaultPlan,
+        metadata: {
+          slug: org.slug,
+          status: org.status,
+          country: settings.country || 'US',
+          timezone: settings.timezone || 'America/New_York',
+          currency: settings.currency || 'USD',
+          created_at: org.created_at?.toISOString(),
+        },
+      });
+
+      if (result.success && result.data) {
+        // Write-back lago_customer_id to organization settings
+        const lagoCustomerId = result.data.customer.lago_id;
+        
+        await prisma.organizations.update({
+          where: { id: org.id },
+          data: {
+            settings: {
+              ...(org.settings as Record<string, unknown> ?? {}),
+              lago_customer_id: lagoCustomerId,
+              lago_sync_status: 'synced',
+              lago_synced_at: new Date().toISOString(),
+            },
+          },
+        });
+
+        logger.info('Organization synced to billing service successfully', {
+          org_id: org.id,
+          lago_customer_id: lagoCustomerId,
+        });
+      } else {
+        logger.error('Billing service returned failure', {
+          org_id: org.id,
+          error: result.error,
+        });
+
+        // Update sync status to failed
+        await prisma.organizations.update({
+          where: { id: org.id },
+          data: {
+            settings: {
+              ...(org.settings as Record<string, unknown> ?? {}),
+              lago_sync_status: 'failed',
+              lago_sync_error: result.error,
+              lago_last_attempt: new Date().toISOString(),
+            },
+          },
+        });
+      }
+    } catch (error: any) {
+      logger.error('Exception during billing sync for organization', {
+        org_id: org.id,
+        error: error.message,
+        stack: error.stack,
+      });
+
+      // Update sync status to failed
+      try {
+        await prisma.organizations.update({
+          where: { id: org.id },
+          data: {
+            settings: {
+              ...(org.settings as Record<string, unknown> ?? {}),
+              lago_sync_status: 'failed',
+              lago_sync_error: error.message,
+              lago_last_attempt: new Date().toISOString(),
+            },
+          },
+        });
+      } catch (updateError: any) {
+        logger.error('Failed to update org sync status', {
+          org_id: org.id,
+          error: updateError.message,
+        });
+      }
+    }
   }
 }
 

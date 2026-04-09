@@ -4,6 +4,7 @@ import ApiResponse from '../utils/ApiResponse';
 import ApiError from '../utils/ApiError';
 import asyncHandler from '../utils/asyncHandler';
 import prisma from '../config/database';
+import { getBillingClient } from '../integrations/billing.client';
 
 /**
  * @swagger
@@ -1032,6 +1033,96 @@ export class AdminController {
     ];
 
     res.json(ApiResponse.success(featureMatrix));
+  });
+
+  /**
+   * @swagger
+   * /admin/billing/organization:
+   *   get:
+   *     summary: Get Lago organization settings
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Lago organization settings
+   */
+  getBillingOrganization = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    // Only super admins can access billing organization settings
+    const isSuperAdmin = req.user.roles?.includes('billing-admin') || req.user.roles?.includes('super_admin');
+    if (!isSuperAdmin) {
+      throw ApiError.forbidden('Insufficient permissions to access billing organization settings');
+    }
+
+    const billing = getBillingClient();
+    const result = await billing.getOrganizationSettings();
+
+    if (!result.success) {
+      throw ApiError.serviceUnavailable(`Failed to fetch billing organization settings: ${result.error}`);
+    }
+
+    res.json(ApiResponse.success(result.data));
+  });
+
+  /**
+   * @swagger
+   * /admin/billing/organization:
+   *   patch:
+   *     summary: Update Lago organization settings
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               webhook_url:
+   *                 type: string
+   *               document_number_prefix:
+   *                 type: string
+   *               country:
+   *                 type: string
+   *               timezone:
+   *                 type: string
+   *               default_currency:
+   *                 type: string
+   *               billing_configuration:
+   *                 type: object
+   *     responses:
+   *       200:
+   *         description: Updated Lago organization settings
+   */
+  updateBillingOrganization = asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json(ApiResponse.error('Authentication required'));
+    }
+
+    // Only super admins can update billing organization settings
+    const isSuperAdmin = req.user.roles?.includes('billing-admin') || req.user.roles?.includes('super_admin');
+    if (!isSuperAdmin) {
+      throw ApiError.forbidden('Insufficient permissions to update billing organization settings');
+    }
+
+    const updates = req.body;
+    if (!updates || Object.keys(updates).length === 0) {
+      throw ApiError.badRequest('No updates provided');
+    }
+
+    const billing = getBillingClient();
+    const result = await billing.updateOrganizationSettings(updates);
+
+    if (!result.success) {
+      throw ApiError.serviceUnavailable(`Failed to update billing organization settings: ${result.error}`);
+    }
+
+    res.json(ApiResponse.success(result.data));
   });
 }
 

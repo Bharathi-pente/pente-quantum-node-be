@@ -54,6 +54,18 @@ export class MeterController {
    *                 enum: [active, draft, archived]
    *                 description: Meter status (optional)
    *                 example: "active"
+   *               billable_metric_code:
+   *                 type: string
+   *                 description: Code for Lago billable metric (optional)
+   *                 example: "api_usage_tokens"
+   *               billable_metric_description:
+   *                 type: string
+   *                 description: Description for Lago billable metric (optional)
+   *                 example: "Tracks API usage in tokens"
+   *               recurring:
+   *                 type: boolean
+   *                 description: Whether the billable metric is recurring (optional)
+   *                 example: true
    *           example:
    *             name: "API Usage Meter"
    *             event_type: "llm.inference"

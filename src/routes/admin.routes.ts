@@ -28,4 +28,8 @@ router.get('/matrix-pricing', adminController.getMatrixPricing);
 router.get('/products', adminController.getProducts);
 router.get('/feature-matrix', adminController.getFeatureMatrix);
 
+// Billing organization management
+router.get('/billing/organization', adminController.getBillingOrganization);
+router.patch('/billing/organization', adminController.updateBillingOrganization);
+
 export default router;

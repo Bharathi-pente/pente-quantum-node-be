@@ -6,6 +6,8 @@ import {
   buildCursorWhere,
   buildPaginatedResponse,
 } from '../utils/pagination';
+import { getBillingClient, type LagoPlanCode } from '../integrations/billing.client';
+import logger from '../config/logger';
 
 export class CustomerService {
   async create(data: any, request?: any) {
@@ -141,6 +143,22 @@ export class CustomerService {
         },
         request
       );
+
+      // ═══════════════════════════════════════════════════════
+      // BILLING INTEGRATION — Trigger 2: New Customer Created
+      // ═══════════════════════════════════════════════════════
+      // Fire-and-recover pattern: sync to billing service after commit
+      // Only sync if BILLING_LEVEL=customer (marketplace model)
+      const billingLevel = process.env.BILLING_LEVEL || 'org';
+      if (billingLevel === 'customer') {
+        this.syncCustomerToBilling(customer, data.org_id).catch((err) => {
+          logger.error('Billing sync failed for new customer', {
+            customer_id: customer.id,
+            customer_name: customer.name,
+            error: err.message,
+          });
+        });
+      }
 
       return customer;
     } catch (error: any) {
@@ -352,9 +370,9 @@ export class CustomerService {
   }
 
   async update(id: string, data: any) {
-    await this.findById(id);
+    const existingCustomer = await this.findById(id);
 
-    return await prisma.customers.update({
+    const updated = await prisma.customers.update({
       where: { id },
       data: {
         ...data,
@@ -369,6 +387,23 @@ export class CustomerService {
         },
       },
     });
+
+    // ═══════════════════════════════════════════════════════
+    // BILLING INTEGRATION — Trigger 4: Subscription Plan Change
+    // ═══════════════════════════════════════════════════════
+    // If product_id changed, sync plan change to billing service
+    if (data.product_id && data.product_id !== existingCustomer.product_id) {
+      this.syncPlanChangeToBilling(updated).catch((err) => {
+        logger.error('Plan change billing sync failed', {
+          customer_id: updated.id,
+          old_product: existingCustomer.product_id,
+          new_product: data.product_id,
+          error: err.message,
+        });
+      });
+    }
+
+    return updated;
   }
 
   async delete(id: string) {
@@ -403,6 +438,173 @@ export class CustomerService {
       trialCustomers,
       totalMRR: totalMRR._sum.mrr || 0,
     };
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * BILLING INTEGRATION — Private method for Trigger 2
+   * ═══════════════════════════════════════════════════════
+   * Sync new customer to billing service and Lago
+   * Called after customer is successfully created
+   * Pattern: Fire-and-recover (failures logged, not thrown)
+   * Only called when BILLING_LEVEL=customer (marketplace model)
+   */
+  private async syncCustomerToBilling(customer: any, orgId: string): Promise<void> {
+    const billing = getBillingClient();
+
+    try {
+      logger.info('Syncing customer to billing service', {
+        customer_id: customer.id,
+        customer_name: customer.name,
+        org_id: orgId,
+      });
+
+      // Map product to Lago plan code
+      const planCode = await this.getPlanCodeFromProduct(customer.product_id);
+
+      const result = await billing.createCustomer({
+        internal_id: customer.id,
+        org_id: orgId,
+        name: customer.name,
+        email: customer.email,
+        plan_code: planCode,
+      });
+
+      if (result.success && result.data) {
+        // Write-back lago_customer_id to customers table
+        const lagoCustomerId = result.data.customer.lago_id;
+
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: {
+            lago_customer_id: lagoCustomerId,
+            lago_sync_status: 'synced',
+            lago_synced_at: new Date(),
+          },
+        });
+
+        logger.info('Customer synced to billing service successfully', {
+          customer_id: customer.id,
+          lago_customer_id: lagoCustomerId,
+        });
+      } else {
+        logger.error('Billing service returned failure', {
+          customer_id: customer.id,
+          error: result.error,
+        });
+
+        // Update sync status to failed
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: {
+            lago_sync_status: 'failed',
+            lago_synced_at: new Date(),
+          },
+        });
+      }
+    } catch (error: any) {
+      logger.error('Exception during billing sync for customer', {
+        customer_id: customer.id,
+        error: error.message,
+        stack: error.stack,
+      });
+
+      // Update sync status to failed
+      try {
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: {
+            lago_sync_status: 'failed',
+            lago_synced_at: new Date(),
+          },
+        });
+      } catch (updateError: any) {
+        logger.error('Failed to update customer sync status', {
+          customer_id: customer.id,
+          error: updateError.message,
+        });
+      }
+    }
+  }
+
+  /**
+   * Map product_id to Lago plan code
+   * Returns 'starter' if no product or unknown product
+   */
+  private async getPlanCodeFromProduct(productId: string | null): Promise<LagoPlanCode> {
+    if (!productId) return 'starter';
+
+    try {
+      const product = await prisma.products.findUnique({
+        where: { id: productId },
+        select: { name: true },
+      });
+
+      if (!product) return 'starter';
+
+      const planMap: Record<string, LagoPlanCode> = {
+        'Starter': 'starter',
+        'Pro': 'pro',
+        'Enterprise': 'enterprise',
+      };
+
+      return planMap[product.name] ?? 'starter';
+    } catch (error) {
+      logger.error('Error fetching product for plan mapping', { productId, error });
+      return 'starter';
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════
+   * BILLING INTEGRATION — Private method for Trigger 4
+   * ═══════════════════════════════════════════════════════
+   * Sync plan change to billing service when product_id updates
+   * Pattern: Fire-and-recover (failures logged, not thrown)
+   */
+  private async syncPlanChangeToBilling(customer: any): Promise<void> {
+    const billing = getBillingClient();
+    const billingLevel = process.env.BILLING_LEVEL || 'org';
+
+    try {
+      logger.info('Syncing plan change to billing service', {
+        customer_id: customer.id,
+        customer_name: customer.name,
+        product_id: customer.product_id,
+      });
+
+      // Map product to Lago plan code
+      const planCode = await this.getPlanCodeFromProduct(customer.product_id);
+
+      // Determine internal_customer_id based on billing level
+      const internal_customer_id = billingLevel === 'customer'
+        ? customer.id
+        : customer.org_id;
+
+      const result = await billing.updateSubscription({
+        internal_customer_id,
+        plan_code: planCode,
+      });
+
+      if (result.success) {
+        logger.info('Plan change synced to billing service successfully', {
+          customer_id: customer.id,
+          internal_customer_id,
+          plan_code: planCode,
+        });
+      } else {
+        logger.error('Billing service returned failure for plan change', {
+          customer_id: customer.id,
+          error: result.error,
+        });
+      }
+    } catch (error: any) {
+      logger.error('Exception during plan change billing sync', {
+        customer_id: customer.id,
+        error: error.message,
+        stack: error.stack,
+      });
+    }
   }
 }
 

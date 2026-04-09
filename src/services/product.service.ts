@@ -4,6 +4,8 @@ import { AuditLogger } from '../utils/audit-logger';
 import { BaseService } from './base/BaseService';
 import { buildOffsetPaginationResponse } from '../utils/pagination';
 import { products, Prisma } from '@prisma/client';
+import { getBillingClient } from '../integrations/billing.client';
+import logger from '../config/logger';
 
 export class ProductService extends BaseService<products> {
   constructor() {
@@ -45,7 +47,7 @@ export class ProductService extends BaseService<products> {
    * Override beforeUpdate to validate and transform fields
    */
   protected beforeUpdate(data: Partial<products>): Partial<products> {
-    const allowedFields = ['name', 'description', 'base_price', 'status'];
+    const allowedFields = ['name', 'description', 'base_price', 'status', 'plan_code', 'interval', 'pay_in_advance', 'amount_cents', 'amount_currency', 'plan_description'];
     const filteredData: any = {};
     
     allowedFields.forEach(field => {
@@ -104,6 +106,17 @@ export class ProductService extends BaseService<products> {
           data,
           request
         );
+      }
+
+      // Sync plan to billing service if plan fields are provided
+      if (data.plan_code && data.interval && data.amount_cents !== undefined) {
+        // Fire-and-recover pattern: sync to billing service after commit
+        this.syncPlanToBilling(record).catch((err) => {
+          logger.error('Failed to sync plan to billing service', {
+            product_id: record.id,
+            error: err.message,
+          });
+        });
       }
 
       return record;
@@ -308,6 +321,47 @@ export class ProductService extends BaseService<products> {
     return await prisma.product_features.delete({
       where: { id: productFeature.id },
     });
+  }
+
+  private async syncPlanToBilling(product: products): Promise<void> {
+    const billing = getBillingClient();
+
+    try {
+      logger.info('Syncing plan to billing service', {
+        product_id: product.id,
+        product_name: product.name,
+        plan_code: product.plan_code,
+      });
+
+      const result = await billing.createPlan({
+        internal_id: product.id,
+        name: product.name,
+        code: product.plan_code!,
+        interval: product.interval!,
+        pay_in_advance: product.pay_in_advance!,
+        amount_cents: product.amount_cents!,
+        amount_currency: product.amount_currency || 'USD',
+        description: product.plan_description || product.description,
+      });
+
+      if (result.success) {
+        logger.info('Plan synced to billing service successfully', {
+          product_id: product.id,
+          plan_code: product.plan_code,
+        });
+      } else {
+        logger.error('Billing service returned failure for plan creation', {
+          product_id: product.id,
+          error: result.error,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to sync plan to billing service', {
+        product_id: product.id,
+        error: error.message,
+      });
+      throw error; // Re-throw to be caught by the fire-and-recover pattern
+    }
   }
 }
 

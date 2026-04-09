@@ -86,6 +86,12 @@ export interface CreateProductDTO extends BaseDTO {
   description?: string;
   base_price?: number;
   status?: 'active' | 'draft' | 'archived';
+  plan_code?: string;
+  interval?: string;
+  pay_in_advance?: boolean;
+  amount_cents?: number;
+  amount_currency?: string;
+  plan_description?: string;
 }
 
 export interface UpdateProductDTO {
@@ -93,6 +99,12 @@ export interface UpdateProductDTO {
   description?: string;
   base_price?: number;
   status?: 'active' | 'draft' | 'archived';
+  plan_code?: string;
+  interval?: string;
+  pay_in_advance?: boolean;
+  amount_cents?: number;
+  amount_currency?: string;
+  plan_description?: string;
 }
 
 /**
@@ -179,6 +191,9 @@ export interface CreateMeterDTO extends BaseDTO {
   aggregation: 'SUM' | 'COUNT' | 'MAX' | 'AVG';
   field: string;
   status?: 'active' | 'draft' | 'archived';
+  billable_metric_code?: string;
+  billable_metric_description?: string;
+  recurring?: boolean;
 }
 
 export interface UpdateMeterDTO {
@@ -187,6 +202,9 @@ export interface UpdateMeterDTO {
   aggregation?: 'SUM' | 'COUNT' | 'MAX' | 'AVG';
   field?: string;
   status?: 'active' | 'draft' | 'archived';
+  billable_metric_code?: string;
+  billable_metric_description?: string;
+  recurring?: boolean;
 }
 
 /**

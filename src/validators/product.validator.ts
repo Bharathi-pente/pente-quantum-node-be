@@ -8,6 +8,12 @@ export const createProductSchema = z.object({
     base_price: z.number().min(0, 'Base price must be non-negative'),
     included_units: z.record(z.any()).optional(),
     status: z.enum(['active', 'draft', 'archived']).optional(),
+    plan_code: z.string().optional(),
+    interval: z.string().optional(),
+    pay_in_advance: z.boolean().optional(),
+    amount_cents: z.number().min(0).optional(),
+    amount_currency: z.string().optional(),
+    plan_description: z.string().optional(),
   }),
 });
 
@@ -21,6 +27,12 @@ export const updateProductSchema = z.object({
     base_price: z.number().min(0).optional(),
     included_units: z.record(z.any()).optional(),
     status: z.enum(['active', 'draft', 'archived']).optional(),
+    plan_code: z.string().optional(),
+    interval: z.string().optional(),
+    pay_in_advance: z.boolean().optional(),
+    amount_cents: z.number().min(0).optional(),
+    amount_currency: z.string().optional(),
+    plan_description: z.string().optional(),
   }),
 });
 
